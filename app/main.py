@@ -9,12 +9,21 @@ from app.db import get_session
 from app.graph import build_portfolio_graph
 from app.insight import get_portfolio_insight
 from app.models import Portfolio
+from app.narration import NarrationError
+from app.query import (
+    INTENT_UNSUPPORTED,
+    PortfolioNotFoundError,
+    answer_portfolio_question,
+)
 from app.schemas import (
     PortfolioAudioResponse,
     PortfolioGraph,
     PortfolioInsight,
+    PortfolioQueryRequest,
+    PortfolioQueryResponse,
     PortfolioSummary,
 )
+from app.tts import TTSError, synthesize_live_narration
 
 app = FastAPI(title="Portfolio Intelligence API")
 
@@ -71,3 +80,43 @@ def get_audio(
         return get_portfolio_audio(portfolio_id)
     except AudioUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/portfolio/{portfolio_id}/query", response_model=PortfolioQueryResponse)
+def query_portfolio(
+    portfolio_id: int,
+    request: PortfolioQueryRequest,
+    session: Session = Depends(get_session),
+) -> PortfolioQueryResponse:
+    portfolio = session.get(Portfolio, portfolio_id)
+    if portfolio is None:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+
+    try:
+        result = answer_portfolio_question(portfolio_id, request.question)
+    except PortfolioNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Portfolio not found") from exc
+    except NarrationError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="The narration service is temporarily unavailable. Please try again.",
+        ) from exc
+
+    audio_url: str | None = None
+    warning: str | None = None
+
+    if result["intent"] != INTENT_UNSUPPORTED:
+        try:
+            audio_path = synthesize_live_narration(result["answer"])
+            audio_url = f"/static/audio/live/{audio_path.name}"
+        except TTSError:
+            warning = "Audio is unavailable right now. The text answer is shown instead."
+
+    return PortfolioQueryResponse(
+        intent=result["intent"],
+        answer=result["answer"],
+        audio_url=audio_url,
+        warning=warning,
+        highlight_node_ids=result["highlight_node_ids"],
+        highlight_edge_ids=result["highlight_edge_ids"],
+    )

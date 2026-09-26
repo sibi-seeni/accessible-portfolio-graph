@@ -80,3 +80,16 @@ class PortfolioAudioResponse(BaseModel):
     portfolio_id: int
     holdings: AudioItem
     risk: AudioItem
+
+
+class PortfolioQueryRequest(BaseModel):
+    question: str
+
+
+class PortfolioQueryResponse(BaseModel):
+    intent: str
+    answer: str
+    audio_url: str | None = None
+    warning: str | None = None
+    highlight_node_ids: list[str]
+    highlight_edge_ids: list[str]

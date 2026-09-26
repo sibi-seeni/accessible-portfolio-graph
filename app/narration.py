@@ -40,6 +40,7 @@ STYLE_RULES = (
 )
 
 ACCOUNT_PATH = "/api/v2/cortex/v1"
+REQUEST_TIMEOUT_SECONDS = 30.0
 
 
 class NarrationError(RuntimeError):
@@ -59,7 +60,11 @@ def _base_url() -> str:
 
 def _build_client() -> OpenAI:
     settings = get_settings()
-    return OpenAI(base_url=_base_url(), api_key=settings.snowflake_pat)
+    return OpenAI(
+        base_url=_base_url(),
+        api_key=settings.snowflake_pat,
+        timeout=REQUEST_TIMEOUT_SECONDS,
+    )
 
 
 def _candidate_models() -> list[str]:
