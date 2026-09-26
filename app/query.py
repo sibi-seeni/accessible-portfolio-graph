@@ -32,19 +32,25 @@ INTENT_UNSUPPORTED = "unsupported"
 
 SUPPORTED_MESSAGE = (
     "This demo can answer four kinds of questions. Ask about your biggest "
-    "hidden risk, why two companies are connected, why you have exposure to a "
+    "hidden risk, how two holdings are connected, why you have exposure to a "
     "sector, or for a summary of what the portfolio owns. Please rephrase your "
     "question as one of those."
 )
 
 QUERY_SYSTEM_PROMPT = (
     "You answer questions about a single curated demo portfolio for blind and "
-    "low-vision investors. Use only the supplied context. Answer in two to five "
-    "short spoken sentences. No markdown. No bullet lists. Never refer to "
-    "visuals or say 'as shown', 'on the screen', 'in the graph', or 'see'. If "
-    "the context does not contain a requested connection, say clearly that no "
-    "curated connection exists. Do not give investment advice. Do not invent "
-    "relationships or facts. Output only the spoken answer."
+    "low-vision investors. A portfolio may hold public equities, private equity "
+    "investments, real estate funds or assets, private credit, and "
+    "infrastructure investments; refer to positions as holdings, assets, or "
+    "investments, not as companies or stocks. Use only the supplied context. "
+    "Speak using human-readable holding display names. Internal identifiers "
+    "such as DATA_CENTER_FUND are not names and must never be read aloud when a "
+    "display name is available. Answer in two to five short spoken sentences. "
+    "No markdown. No bullet lists. Never refer to visuals or say 'as shown', "
+    "'on the screen', 'in the graph', or 'see'. If the context does not contain "
+    "a requested connection, say clearly that no curated connection exists. Do "
+    "not give investment advice. Do not invent relationships or facts. Output "
+    "only the spoken answer."
 )
 
 CONNECT_KEYWORDS = (
@@ -55,6 +61,7 @@ CONNECT_KEYWORDS = (
     "associated",
     "tied",
     "correlat",
+    "exposed",
 )
 SECTOR_HINTS = ("sector", "industry", "contribute", "exposure to")
 RISK_KEYWORDS = (
@@ -108,6 +115,66 @@ def _known_tickers(session: Session) -> set[str]:
     tickers |= set(session.scalars(select(Exposure.ticker)).all())
     tickers |= set(session.scalars(select(Exposure.exposed_to_ticker)).all())
     return {ticker.upper() for ticker in tickers}
+
+
+GENERIC_TOKENS = {
+    "fund", "funds", "credit", "estate", "real", "energy", "housing", "software",
+    "data", "center", "centre", "private", "infra", "infrastructure", "renewable",
+    "corporation", "corp", "company", "inc", "incorporated", "partners", "partner",
+    "holdings", "group", "assets", "asset", "investment", "investments", "capital",
+    "trust", "services", "service", "financial", "financials", "motor", "motors",
+    "technologies", "technology", "semiconductor", "semiconductors", "utility",
+    "utilities", "digital", "industrial", "industrials", "materials", "mining",
+    "automotive", "battery", "critical", "minerals", "residential", "global",
+}
+
+
+def _normalize(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", text.lower()).strip()
+
+
+def _holding_aliases(holding: Holding) -> list[str]:
+    """Human and identifier phrases that can refer to a single holding."""
+    phrases: set[str] = set()
+    ticker_words = _normalize(holding.ticker).split()
+    if ticker_words:
+        phrases.add(" ".join(ticker_words))
+
+    name_words = _normalize(holding.company_name).split()
+    for size in range(1, len(name_words) + 1):
+        for start in range(0, len(name_words) - size + 1):
+            phrase = " ".join(name_words[start : start + size])
+            if size == 1 and (len(phrase) < 5 or phrase in GENERIC_TOKENS):
+                continue
+            phrases.add(phrase)
+    return sorted(phrases, key=len, reverse=True)
+
+
+def _extract_entities(question: str, holdings: list[Holding]) -> list[str]:
+    """Resolve holdings mentioned by exact ID or human-readable name."""
+    normalized = _normalize(question)
+    found: list[str] = []
+    aliases: list[tuple[str, str]] = sorted(
+        (
+            (phrase, holding.ticker)
+            for holding in holdings
+            for phrase in _holding_aliases(holding)
+        ),
+        key=lambda item: len(item[0]),
+        reverse=True,
+    )
+    for phrase, ticker in aliases:
+        if ticker in found:
+            continue
+        if re.search(rf"\b{re.escape(phrase)}\b", normalized):
+            found.append(ticker)
+    return found
+
+
+def _extract_unknown_tokens(question: str, known: set[str]) -> list[str]:
+    """Upper-case identifier-like tokens not present in the curated data."""
+    return [token for token in _extract_tickers(question, known) if token not in known]
+
 
 
 def _extract_tickers(question: str, known: set[str]) -> list[str]:
@@ -204,6 +271,16 @@ def _holding_node_id(ticker: str, held: set[str]) -> str:
     return f"holding:{ticker}" if ticker in held else f"external:{ticker}"
 
 
+def _name_by_ticker(holdings: list[Holding]) -> dict[str, str]:
+    return {holding.ticker: holding.company_name for holding in holdings}
+
+
+def _named(holdings: list[Holding], tickers: list[str]) -> list[dict[str, str]]:
+    names = _name_by_ticker(holdings)
+    return [{"id": ticker, "name": names.get(ticker, ticker)} for ticker in tickers]
+
+
+
 def _answer_hidden_risk(
     session: Session, portfolio: Portfolio, holdings: list[Holding]
 ) -> dict[str, Any]:
@@ -221,16 +298,17 @@ def _answer_hidden_risk(
         "portfolio": {"id": portfolio.id, "name": portfolio.name},
         "sector": insight.sector,
         "exposure_score": insight.percentage,
-        "direct_tickers": insight.direct_tickers,
-        "indirect_tickers": insight.indirect_tickers,
+        "direct_holdings": _named(holdings, insight.direct_tickers),
+        "indirect_holdings": _named(holdings, insight.indirect_tickers),
         "exposure_notes": insight.exposure_notes,
         "methodology": insight.methodology,
     }
     instruction = (
         "Answer using only the supplied insight. Name the concentrated sector "
-        "and the mapped exposure score. Say which companies are held directly "
-        "in that sector and which add indirect exposure. Explain briefly why "
-        "the connections matter. Do not give investment advice."
+        "and the mapped exposure score. Say which holdings are held directly in "
+        "that sector and which add indirect exposure. Use the display names and "
+        "never read internal identifiers aloud. Explain briefly why the "
+        "connections matter. Do not give investment advice."
     )
     answer = _narrate(context, instruction)
 
@@ -250,18 +328,20 @@ def _answer_connection(
     portfolio: Portfolio,
     holdings: list[Holding],
     tickers: list[str],
-    known: set[str],
+    unknown: list[str],
 ) -> dict[str, Any]:
     held = {holding.ticker for holding in holdings}
     edges = _load_edges(session, held)
-    unknown = [t for t in tickers if t not in known]
+    names = _name_by_ticker(holdings)
 
+    wanted = set(tickers)
     if len(tickers) >= 2:
-        wanted = set(tickers)
         focus = [e for e in edges if e.ticker in wanted and e.exposed_to_ticker in wanted]
         connection_exists: bool | None = bool(focus)
+    elif unknown:
+        focus = []
+        connection_exists = False
     else:
-        wanted = set(tickers)
         focus = [
             e
             for e in edges
@@ -272,15 +352,17 @@ def _answer_connection(
     context = {
         "question_type": INTENT_CONNECTION,
         "portfolio": {"id": portfolio.id, "name": portfolio.name},
-        "mentioned_tickers": tickers,
-        "unknown_tickers": unknown,
-        "requested_pair": tickers if len(tickers) >= 2 else None,
+        "mentioned_holdings": _named(holdings, tickers),
+        "unknown_identifiers": unknown,
+        "requested_pair": _named(holdings, tickers) if len(tickers) >= 2 else None,
         "connection_exists": connection_exists,
         "connections": [
             {
                 "edge_id": e.id,
                 "source": e.ticker,
+                "source_name": names.get(e.ticker, e.ticker),
                 "target": e.exposed_to_ticker,
+                "target_name": names.get(e.exposed_to_ticker, e.exposed_to_ticker),
                 "via": e.via,
                 "sector": e.exposure_sector,
                 "note": e.note,
@@ -290,15 +372,17 @@ def _answer_connection(
     }
     instruction = (
         "Answer using only the supplied connections. If a requested pair is "
-        "listed, explain how the two companies are connected and through what. "
-        "If connection_exists is false, or a mentioned ticker is unknown, say "
+        "listed, explain how the two holdings are connected and through what. "
+        "Use the holding display names; never read internal identifiers aloud "
+        "and never present a private asset as a public stock. If "
+        "connection_exists is false, or a mentioned identifier is unknown, say "
         "clearly that no curated connection was found. Do not invent links."
     )
     answer = _narrate(context, instruction)
 
     focus_tickers = [e.ticker for e in focus] + [e.exposed_to_ticker for e in focus]
     node_ids = _dedupe(
-        [_holding_node_id(t, held) for t in tickers + focus_tickers if t in known or t in held]
+        [_holding_node_id(t, held) for t in tickers + focus_tickers]
     )
     return {
         "intent": INTENT_CONNECTION,
@@ -323,15 +407,16 @@ def _answer_sector(
             "question_type": INTENT_SECTOR,
             "portfolio": {"id": portfolio.id, "name": portfolio.name},
             "sector": resolved,
-            "direct_tickers": theme.direct_tickers,
-            "indirect_tickers": theme.indirect_tickers,
+            "direct_holdings": _named(holdings, theme.direct_tickers),
+            "indirect_holdings": _named(holdings, theme.indirect_tickers),
             "exposure_score": float(theme.combined_weight * 100),
             "exposure_notes": theme.exposure_notes,
         }
         instruction = (
             "Answer using only the supplied sector exposure. Name the sector "
-            "and the companies that contribute directly and indirectly. Use the "
-            "curated notes to explain why. Do not give investment advice."
+            "and the holdings that contribute directly and indirectly. Use "
+            "holding display names and never read internal identifiers aloud. "
+            "Use the curated notes to explain why. Do not give investment advice."
         )
         answer = _narrate(context, instruction)
         return {
@@ -358,8 +443,8 @@ def _answer_sector(
         breakdown.append(
             {
                 "sector": name,
-                "direct_tickers": theme.direct_tickers,
-                "indirect_tickers": theme.indirect_tickers,
+                "direct_holdings": _named(holdings, theme.direct_tickers),
+                "indirect_holdings": _named(holdings, theme.indirect_tickers),
                 "exposure_score": float(theme.combined_weight * 100),
             }
         )
@@ -375,7 +460,8 @@ def _answer_sector(
     instruction = (
         "The question did not name a known sector, so answer using the "
         "supplied sector breakdown. Summarize the portfolio's main sector "
-        "exposures and the companies behind them. Do not give investment advice."
+        "exposures and the holdings behind them. Use holding display names and "
+        "never read internal identifiers aloud. Do not give investment advice."
     )
     answer = _narrate(context, instruction)
     return {
@@ -405,9 +491,10 @@ def _answer_summary(portfolio: Portfolio, holdings: list[Holding]) -> dict[str, 
     }
     instruction = (
         "Answer using only the supplied holdings. Summarize what the portfolio "
-        "owns, naming the main companies with their weights and sectors. This "
-        "is a direct holdings summary only; do not discuss hidden or indirect "
-        "exposure."
+        "owns, naming each holding by its display name with its weight and "
+        "sector. Never read internal identifiers aloud and never present a "
+        "private asset as a public stock. This is a direct holdings summary "
+        "only; do not discuss hidden or indirect exposure."
     )
     answer = _narrate(context, instruction)
     return {
@@ -433,8 +520,9 @@ def answer_portfolio_question(portfolio_id: int, question: str) -> dict[str, Any
             s.name for s in session.scalars(select(Sector).order_by(Sector.id)).all()
         ]
         known = _known_tickers(session)
-        tickers = _extract_tickers(question, known)
-        intent = _route(question, tickers, sectors)
+        entities = _extract_entities(question, holdings)
+        unknown = _extract_unknown_tokens(question, known)
+        intent = _route(question, entities + unknown, sectors)
 
         if intent == INTENT_UNSUPPORTED:
             return {
@@ -446,7 +534,7 @@ def answer_portfolio_question(portfolio_id: int, question: str) -> dict[str, Any
         if intent == INTENT_HIDDEN_RISK:
             return _answer_hidden_risk(session, portfolio, holdings)
         if intent == INTENT_CONNECTION:
-            return _answer_connection(session, portfolio, holdings, tickers, known)
+            return _answer_connection(session, portfolio, holdings, entities, unknown)
         if intent == INTENT_SECTOR:
             return _answer_sector(session, portfolio, holdings, question)
         return _answer_summary(portfolio, holdings)

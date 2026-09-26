@@ -89,11 +89,36 @@ def test_holdings_narration_prompt_contains_structured_holdings(
     system_content = call["messages"][0]["content"]
 
     assert "NVDA" in user_content
-    assert "MSFT" in user_content
-    assert "AI Growth" in user_content
+    assert "DATA_CENTER_FUND" in user_content
+    assert "NVIDIA Corporation" in user_content
+    assert "AI Infrastructure" in user_content
     assert "holdings_overview" in user_content
     assert "blind and low-vision investors" in system_content
     assert "complete source of truth" in system_content
+
+
+def test_prompts_understand_cross_asset_holdings(fake_client: FakeClient) -> None:
+    generate_holdings_narration(1)
+    instruction = fake_client.calls[0]["messages"][1]["content"]
+    system_content = fake_client.calls[0]["messages"][0]["content"]
+
+    for phrase in (
+        "private equity",
+        "real estate",
+        "private credit",
+        "infrastructure",
+    ):
+        assert phrase in system_content
+
+    assert "holdings, assets, or investments" in system_content
+    assert "internal IDs" in system_content
+    assert "company_name" in system_content
+    assert "never read a synthetic identifier aloud" in system_content
+    assert "fund structures" in system_content
+    assert "borrowers" in system_content
+    assert "tenants" in system_content
+    assert "do not call every holding a company or a stock" in system_content
+    assert "mix of holdings, asset types, and sectors" in instruction
 
 
 def test_risk_narration_prompt_contains_insight(fake_client: FakeClient) -> None:

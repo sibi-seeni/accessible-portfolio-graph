@@ -25,18 +25,26 @@ from app.schemas import PortfolioInsight
 
 SYSTEM_PROMPT = (
     "You produce concise audio-first portfolio narration for blind and "
-    "low-vision investors. Treat supplied structured portfolio data as the "
-    "complete source of truth."
+    "low-vision investors. A portfolio may hold public equities, private "
+    "equity investments, real estate funds or assets, private credit, and "
+    "infrastructure investments. Treat the supplied structured portfolio data "
+    "as the complete source of truth."
 )
 
 STYLE_RULES = (
     "Rules for every response: This narration will be heard, not read. Use "
     "short, simple sentences. No markdown. No bullet lists. Never refer to "
-    "visuals or say 'as shown', 'on the screen', 'in the graph', or 'see'. Use "
-    "calm, factual language. Aim for roughly 60 to 100 spoken words. Clearly "
-    "distinguish a direct holding from indirect exposure. Do not give "
+    "visuals or say 'as shown', 'on the screen', 'in the graph', or 'see'. "
+    "Refer to positions as holdings, assets, or investments; do not call every "
+    "holding a company or a stock. Identifiers such as DATA_CENTER_FUND are "
+    "internal IDs, not names. When a holding has a company_name, use that "
+    "human-readable display name and never read a synthetic identifier aloud. "
+    "Use calm, factual language. Aim for roughly 60 to 100 spoken words. "
+    "Clearly distinguish a direct holding from indirect exposure. Do not give "
     "investment advice. Do not invent any fact that is not present in the "
-    "supplied structured data. Output only the spoken narration text."
+    "supplied structured data, including fund structures, ownership "
+    "percentages, borrowers, tenants, or returns. Output only the spoken "
+    "narration text."
 )
 
 ACCOUNT_PATH = "/api/v2/cortex/v1"
@@ -163,10 +171,11 @@ def generate_holdings_narration(portfolio_id: int) -> str:
 
     payload["request"] = "holdings_overview"
     instruction = (
-        "Narrate this portfolio's holdings. Name the portfolio and its mix of "
-        "companies and sectors. Mention each direct holding and how much of the "
-        "portfolio it represents. This is a direct holdings summary only; do "
-        "not discuss hidden or indirect exposure."
+        "Narrate this portfolio's holdings. Name the portfolio and describe its "
+        "mix of holdings, asset types, and sectors. Mention each direct holding "
+        "using its display name and how much of the portfolio it represents. "
+        "This is a direct holdings summary only; do not discuss hidden or "
+        "indirect exposure."
     )
     return _generate(_messages(payload, instruction))
 
@@ -189,10 +198,10 @@ def generate_risk_narration(portfolio_id: int, insight: PortfolioInsight) -> str
     instruction = (
         "Explain the hidden concentration for this portfolio. State the "
         "combined exposure figure as a mapped exposure score, not a financial "
-        "risk percentage. Distinguish clearly between the companies held "
-        "directly in the concentrating sector and the companies that add "
-        "indirect exposure through the listed supply-chain, competitor, or "
-        "regulatory links. Explain why these hidden connections matter without "
-        "giving investment advice."
+        "risk percentage. Distinguish clearly between the holdings held "
+        "directly in the concentrating sector and the holdings that add "
+        "indirect exposure through the listed exposure links. Explain why these "
+        "hidden connections matter without giving investment advice. Name "
+        "holdings by their display name."
     )
     return _generate(_messages(payload, instruction))
