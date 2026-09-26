@@ -1,0 +1,187 @@
+{
+  "sectors": [
+    { "id": 1, "name": "Semiconductors" },
+    { "id": 2, "name": "Software" },
+    { "id": 3, "name": "Consumer Staples" },
+    { "id": 4, "name": "Payments" },
+    { "id": 5, "name": "Logistics" },
+    { "id": 6, "name": "E-Commerce & Retail" },
+    { "id": 7, "name": "Automotive" },
+    { "id": 8, "name": "Industrials" },
+    { "id": 9, "name": "Energy" },
+    { "id": 10, "name": "Materials & Mining" },
+    { "id": 11, "name": "Cloud & Data Infrastructure" },
+    { "id": 12, "name": "Battery & Critical Minerals" }
+  ],
+  "portfolios": [
+    {
+      "id": 1,
+      "name": "AI Growth",
+      "description": "A growth-oriented mix of cloud, software, and chip companies that looks diversified but shares a common dependence on advanced semiconductor manufacturing.",
+      "holdings": [
+        { "ticker": "NVDA", "company_name": "NVIDIA Corporation", "shares": 20, "sector": "Semiconductors" },
+        { "ticker": "TSM", "company_name": "Taiwan Semiconductor Manufacturing Company", "shares": 50, "sector": "Semiconductors" },
+        { "ticker": "ASML", "company_name": "ASML Holding N.V.", "shares": 10, "sector": "Semiconductors" },
+        { "ticker": "MSFT", "company_name": "Microsoft Corporation", "shares": 30, "sector": "Software" },
+        { "ticker": "GOOGL", "company_name": "Alphabet Inc.", "shares": 25, "sector": "Software" },
+        { "ticker": "ORCL", "company_name": "Oracle Corporation", "shares": 35, "sector": "Software" }
+      ],
+      "expected_insight": {
+        "sector": "Semiconductors",
+        "thesis": "The portfolio looks like broad software and cloud diversification, but its cloud and AI holdings all depend on the same advanced semiconductor manufacturing and equipment chain, concentrating hidden exposure in semiconductors.",
+        "direct_tickers": ["NVDA", "TSM", "ASML"],
+        "indirect_tickers": ["MSFT", "GOOGL", "ORCL"],
+        "exposure_edge_ids": [1, 2, 3, 4, 5]
+      }
+    },
+    {
+      "id": 2,
+      "name": "Everyday Diversified",
+      "description": "A balanced blend of consumer staples, payments, logistics, and e-commerce that hides a shared reliance on cloud infrastructure and digital commerce.",
+      "holdings": [
+        { "ticker": "PG", "company_name": "The Procter & Gamble Company", "shares": 60, "sector": "Consumer Staples" },
+        { "ticker": "KO", "company_name": "The Coca-Cola Company", "shares": 80, "sector": "Consumer Staples" },
+        { "ticker": "V", "company_name": "Visa Inc.", "shares": 40, "sector": "Payments" },
+        { "ticker": "MA", "company_name": "Mastercard Incorporated", "shares": 30, "sector": "Payments" },
+        { "ticker": "UPS", "company_name": "United Parcel Service, Inc.", "shares": 45, "sector": "Logistics" },
+        { "ticker": "AMZN", "company_name": "Amazon.com, Inc.", "shares": 15, "sector": "E-Commerce & Retail" },
+        { "ticker": "CRM", "company_name": "Salesforce, Inc.", "shares": 20, "sector": "Software" }
+      ],
+      "expected_insight": {
+        "sector": "Cloud & Data Infrastructure",
+        "thesis": "Beneath the consumer, payments, and logistics diversification, several holdings depend on the same cloud infrastructure and digital-commerce platform, concentrating hidden exposure in Amazon's cloud and marketplace ecosystem.",
+        "direct_tickers": ["AMZN"],
+        "indirect_tickers": ["V", "MA", "CRM"],
+        "exposure_edge_ids": [6, 7, 8, 9]
+      }
+    },
+    {
+      "id": 3,
+      "name": "Energy Transition",
+      "description": "An energy-transition mix of automakers, industrials, and energy companies whose products trace back to a common battery and critical-minerals supply chain.",
+      "holdings": [
+        { "ticker": "TSLA", "company_name": "Tesla, Inc.", "shares": 25, "sector": "Automotive" },
+        { "ticker": "GM", "company_name": "General Motors Company", "shares": 70, "sector": "Automotive" },
+        { "ticker": "F", "company_name": "Ford Motor Company", "shares": 150, "sector": "Automotive" },
+        { "ticker": "CAT", "company_name": "Caterpillar Inc.", "shares": 20, "sector": "Industrials" },
+        { "ticker": "XOM", "company_name": "Exxon Mobil Corporation", "shares": 100, "sector": "Energy" },
+        { "ticker": "ENPH", "company_name": "Enphase Energy, Inc.", "shares": 40, "sector": "Energy" },
+        { "ticker": "ALB", "company_name": "Albemarle Corporation", "shares": 30, "sector": "Materials & Mining" }
+      ],
+      "expected_insight": {
+        "sector": "Battery & Critical Minerals",
+        "thesis": "Automakers, energy storage, and mining equipment all route back to lithium and battery-material supply, concentrating the portfolio in the battery and critical-minerals chain rather than the diversified energy picture it first appears to be.",
+        "direct_tickers": ["ALB"],
+        "indirect_tickers": ["TSLA", "GM", "F", "ENPH", "CAT"],
+        "exposure_edge_ids": [10, 11, 12, 13, 14, 15]
+      }
+    }
+  ],
+  "exposures": [
+    {
+      "id": 1,
+      "ticker": "NVDA",
+      "exposed_to_ticker": "TSM",
+      "via": "supply_chain",
+      "note": "Nvidia's AI accelerators are fabricated by Taiwan Semiconductor, so Nvidia's product supply depends on TSMC's advanced manufacturing capacity."
+    },
+    {
+      "id": 2,
+      "ticker": "TSM",
+      "exposed_to_ticker": "ASML",
+      "via": "supply_chain",
+      "note": "Taiwan Semiconductor relies on ASML's extreme-ultraviolet lithography systems to produce its most advanced chips."
+    },
+    {
+      "id": 3,
+      "ticker": "MSFT",
+      "exposed_to_ticker": "NVDA",
+      "via": "supply_chain",
+      "note": "Microsoft's AI and cloud services depend on Nvidia GPUs for a large share of their training and inference capacity."
+    },
+    {
+      "id": 4,
+      "ticker": "GOOGL",
+      "exposed_to_ticker": "NVDA",
+      "via": "supply_chain",
+      "note": "Alphabet's cloud and AI workloads rely on Nvidia accelerators alongside its own in-house chips."
+    },
+    {
+      "id": 5,
+      "ticker": "ORCL",
+      "exposed_to_ticker": "NVDA",
+      "via": "supply_chain",
+      "note": "Oracle's AI cloud infrastructure depends on Nvidia GPUs to deliver accelerated computing to customers."
+    },
+    {
+      "id": 6,
+      "ticker": "V",
+      "exposed_to_ticker": "AMZN",
+      "via": "supply_chain",
+      "note": "Visa's payment processing runs on large cloud providers including Amazon Web Services, so its transaction capacity depends on that infrastructure."
+    },
+    {
+      "id": 7,
+      "ticker": "MA",
+      "exposed_to_ticker": "AMZN",
+      "via": "supply_chain",
+      "note": "Mastercard depends on major cloud providers such as AWS to operate its global payment network."
+    },
+    {
+      "id": 8,
+      "ticker": "CRM",
+      "exposed_to_ticker": "AMZN",
+      "via": "supply_chain",
+      "note": "Salesforce hosts its cloud software on Amazon Web Services, so its service availability depends on that infrastructure."
+    },
+    {
+      "id": 9,
+      "ticker": "UPS",
+      "exposed_to_ticker": "AMZN",
+      "via": "competitor",
+      "note": "UPS competes with Amazon's expanding logistics network, so its parcel volumes are exposed to Amazon insourcing more deliveries."
+    },
+    {
+      "id": 10,
+      "ticker": "TSLA",
+      "exposed_to_ticker": "ALB",
+      "via": "supply_chain",
+      "note": "Tesla's battery production depends on lithium supply from producers such as Albemarle."
+    },
+    {
+      "id": 11,
+      "ticker": "GM",
+      "exposed_to_ticker": "ALB",
+      "via": "supply_chain",
+      "note": "General Motors' electric-vehicle plans depend on reliable lithium and battery-material supply."
+    },
+    {
+      "id": 12,
+      "ticker": "F",
+      "exposed_to_ticker": "ALB",
+      "via": "supply_chain",
+      "note": "Ford's electric-vehicle ramp depends on lithium and battery-material supply from producers such as Albemarle."
+    },
+    {
+      "id": 13,
+      "ticker": "ENPH",
+      "exposed_to_ticker": "ALB",
+      "via": "supply_chain",
+      "note": "Enphase's battery storage products depend on lithium-ion cell supply that traces back to critical-mineral producers."
+    },
+    {
+      "id": 14,
+      "ticker": "ALB",
+      "exposed_to_ticker": "CAT",
+      "via": "supply_chain",
+      "note": "Albemarle's lithium mining and processing operations depend on heavy equipment from suppliers such as Caterpillar."
+    },
+    {
+      "id": 15,
+      "ticker": "TSLA",
+      "exposed_to_ticker": "GM",
+      "via": "regulatory",
+      "note": "Tesla and General Motors are both exposed to changing electric-vehicle tax-credit and emissions regulations that shape demand for their vehicles."
+    }
+  ]
+}
