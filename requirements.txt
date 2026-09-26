@@ -4,5 +4,6 @@ pydantic-settings
 sqlalchemy
 psycopg[binary]
 httpx
+openai
 elevenlabs
 pytest
