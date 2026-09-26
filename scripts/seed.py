@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -9,6 +10,7 @@ from app.models import Exposure, Holding, Portfolio, Sector
 
 DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "demo_data.json"
 ALLOWED_VIA = {"supply_chain", "competitor", "regulatory"}
+WEIGHT_TOLERANCE = Decimal("0.0001")
 
 
 def load_demo_data(path: Path = DATA_PATH) -> dict[str, Any]:
@@ -29,17 +31,48 @@ def validate(data: dict[str, Any]) -> None:
             raise ValueError(
                 f"portfolio {portfolio['name']!r} must have 5-8 holdings, found {len(holdings)}"
             )
+
+        total_weight = Decimal("0")
         for holding in holdings:
+            if "weight" not in holding:
+                raise ValueError(
+                    f"holding {holding['ticker']!r} in portfolio "
+                    f"{portfolio['name']!r} is missing weight"
+                )
+            weight = Decimal(str(holding["weight"]))
+            if not Decimal("0") < weight <= Decimal("1"):
+                raise ValueError(
+                    f"holding {holding['ticker']!r} in portfolio "
+                    f"{portfolio['name']!r} has weight {weight}, must be > 0 and <= 1"
+                )
+            total_weight += weight
+
             if holding["sector"] not in sector_names:
                 raise ValueError(
                     f"holding {holding['ticker']!r} references unknown sector "
                     f"{holding['sector']!r}"
                 )
 
+        if abs(total_weight - Decimal("1")) > WEIGHT_TOLERANCE:
+            raise ValueError(
+                f"portfolio {portfolio['name']!r} holding weights sum to "
+                f"{total_weight}, expected 1.0"
+            )
+
     for exposure in data["exposures"]:
         if exposure["via"] not in ALLOWED_VIA:
             raise ValueError(
                 f"exposure {exposure['id']} has invalid via {exposure['via']!r}"
+            )
+        exposure_sector = exposure.get("exposure_sector")
+        if not isinstance(exposure_sector, str) or not exposure_sector.strip():
+            raise ValueError(
+                f"exposure {exposure['id']} is missing a non-empty exposure_sector"
+            )
+        if exposure_sector not in sector_names:
+            raise ValueError(
+                f"exposure {exposure['id']} references unknown exposure_sector "
+                f"{exposure_sector!r}"
             )
 
 
@@ -75,6 +108,7 @@ def seed(data: dict[str, Any]) -> dict[str, int]:
                     company_name=holding["company_name"],
                     shares=holding["shares"],
                     sector=holding["sector"],
+                    weight=Decimal(str(holding["weight"])),
                 )
                 for portfolio in data["portfolios"]
                 for holding in portfolio["holdings"]
@@ -87,6 +121,7 @@ def seed(data: dict[str, Any]) -> dict[str, int]:
                     ticker=exposure["ticker"],
                     exposed_to_ticker=exposure["exposed_to_ticker"],
                     via=exposure["via"],
+                    exposure_sector=exposure["exposure_sector"],
                     note=exposure["note"],
                 )
                 for exposure in data["exposures"]

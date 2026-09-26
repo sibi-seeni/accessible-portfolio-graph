@@ -5,8 +5,9 @@ from sqlalchemy.orm import Session
 
 from app.db import get_session
 from app.graph import build_portfolio_graph
+from app.insight import get_portfolio_insight
 from app.models import Portfolio
-from app.schemas import PortfolioGraph, PortfolioSummary
+from app.schemas import PortfolioGraph, PortfolioInsight, PortfolioSummary
 
 app = FastAPI(title="Portfolio Intelligence API")
 
@@ -38,3 +39,13 @@ def get_portfolio_graph(
     if portfolio is None:
         raise HTTPException(status_code=404, detail="Portfolio not found")
     return build_portfolio_graph(session, portfolio)
+
+
+@app.get("/portfolio/{portfolio_id}/insight", response_model=PortfolioInsight)
+def get_insight(
+    portfolio_id: int, session: Session = Depends(get_session)
+) -> PortfolioInsight:
+    insight = get_portfolio_insight(session, portfolio_id)
+    if insight is None:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+    return insight

@@ -32,6 +32,7 @@ def test_holdings_columns_and_foreign_key() -> None:
         "company_name",
         "shares",
         "sector",
+        "weight",
     }
     assert table.c.id.primary_key
     assert table.c.portfolio_id.nullable is False
@@ -41,6 +42,20 @@ def test_holdings_columns_and_foreign_key() -> None:
     assert table.c.company_name.nullable is False
     assert table.c.shares.nullable is False
     assert table.c.sector.nullable is False
+    assert table.c.weight.nullable is False
+
+
+def test_holdings_weight_check_constraint() -> None:
+    table = Base.metadata.tables["holdings"]
+    checks = [
+        c
+        for c in table.constraints
+        if isinstance(c, CheckConstraint) and c.name == "ck_holdings_weight"
+    ]
+    assert len(checks) == 1
+    sqltext = str(checks[0].sqltext)
+    assert "weight > 0" in sqltext
+    assert "weight <= 1" in sqltext
 
 
 def test_exposures_columns() -> None:
@@ -50,12 +65,14 @@ def test_exposures_columns() -> None:
         "ticker",
         "exposed_to_ticker",
         "via",
+        "exposure_sector",
         "note",
     }
     assert table.c.id.primary_key
     assert table.c.ticker.nullable is False
     assert table.c.exposed_to_ticker.nullable is False
     assert table.c.via.nullable is False
+    assert table.c.exposure_sector.nullable is False
     assert table.c.note.nullable is False
 
 

@@ -1,7 +1,9 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from app.db import SessionLocal
 from app.main import app
+from app.models import Exposure
 
 client = TestClient(app)
 
@@ -96,3 +98,47 @@ def test_graph_is_deterministic() -> None:
     first = client.get("/portfolio/1/graph").json()
     second = client.get("/portfolio/1/graph").json()
     assert first == second
+
+
+def test_graph_holding_nodes_expose_weight() -> None:
+    graph = client.get("/portfolio/1/graph").json()
+    holding_nodes = [node for node in graph["nodes"] if node["type"] == "holding"]
+    assert holding_nodes
+
+    for node in holding_nodes:
+        assert "weight" in node
+        assert 0 < node["weight"] <= 1
+
+    total = sum(node["weight"] for node in holding_nodes)
+    assert abs(total - 1.0) < 1e-6
+
+    for node in graph["nodes"]:
+        if node["type"] != "holding":
+            assert "weight" not in node
+
+
+def test_graph_exposure_edges_expose_sector() -> None:
+    graph = client.get("/portfolio/3/graph").json()
+    exposure_edges = {
+        edge["id"]: edge for edge in graph["edges"] if edge["type"] != "belongs_to_sector"
+    }
+
+    for edge_id in ("exposure:10", "exposure:11", "exposure:12", "exposure:13"):
+        assert exposure_edges[edge_id]["exposure_sector"] == "Battery & Critical Minerals"
+    assert exposure_edges["exposure:14"]["exposure_sector"] == "Industrials"
+    assert exposure_edges["exposure:15"]["exposure_sector"] == "Automotive"
+
+    for edge in exposure_edges.values():
+        assert edge["exposure_sector"]
+
+    for edge in graph["edges"]:
+        if edge["type"] == "belongs_to_sector":
+            assert "exposure_sector" not in edge
+
+
+def test_seeded_exposures_persist_exposure_sector() -> None:
+    with SessionLocal() as session:
+        exposures = session.query(Exposure).all()
+
+    assert len(exposures) == 15
+    assert all(exposure.exposure_sector for exposure in exposures)

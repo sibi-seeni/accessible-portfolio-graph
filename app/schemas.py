@@ -12,6 +12,7 @@ class GraphNode(BaseModel):
     label: str
     ticker: str | None = None
     sector: str | None = None
+    weight: float | None = None
 
     @model_serializer
     def _serialize(self) -> dict[str, object]:
@@ -20,6 +21,8 @@ class GraphNode(BaseModel):
             data["ticker"] = self.ticker
         if self.sector is not None:
             data["sector"] = self.sector
+        if self.weight is not None:
+            data["weight"] = self.weight
         return data
 
 
@@ -29,7 +32,22 @@ class GraphEdge(BaseModel):
     target: str
     type: str
     label: str | None = None
+    exposure_sector: str | None = None
     note: str | None = None
+
+    @model_serializer
+    def _serialize(self) -> dict[str, object]:
+        data: dict[str, object] = {
+            "id": self.id,
+            "source": self.source,
+            "target": self.target,
+            "type": self.type,
+            "label": self.label,
+        }
+        if self.exposure_sector is not None:
+            data["exposure_sector"] = self.exposure_sector
+        data["note"] = self.note
+        return data
 
 
 class PortfolioGraph(BaseModel):
@@ -37,3 +55,17 @@ class PortfolioGraph(BaseModel):
     portfolio_name: str
     nodes: list[GraphNode]
     edges: list[GraphEdge]
+
+
+class PortfolioInsight(BaseModel):
+    portfolio_id: int
+    portfolio_name: str
+    sector: str
+    percentage: float
+    direct_tickers: list[str]
+    indirect_tickers: list[str]
+    contributing_tickers: list[str]
+    exposure_edge_ids: list[int]
+    exposure_notes: list[str]
+    methodology: str
+    narration: str | None = None

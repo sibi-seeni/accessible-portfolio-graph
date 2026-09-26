@@ -12,6 +12,7 @@ def _holding_node(holding: Holding) -> GraphNode:
         label=holding.company_name,
         ticker=holding.ticker,
         sector=holding.sector,
+        weight=float(holding.weight),
     )
 
 
@@ -74,6 +75,7 @@ def build_portfolio_graph(session: Session, portfolio: Portfolio) -> PortfolioGr
                 target=target_id,
                 type=exposure.via,
                 label=exposure.via,
+                exposure_sector=exposure.exposure_sector,
                 note=exposure.note,
             )
         )
