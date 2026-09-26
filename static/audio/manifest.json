@@ -1,19 +1,19 @@
 {
   "1": {
-    "holdings_text": "AI Growth holds six direct positions across two sectors. Semiconductors make up 45 percent of the portfolio. Software makes up 55 percent. The direct holdings are NVIDIA at 20 percent, Taiwan Semiconductor Manufacturing at 15 percent, and ASML Holding at 10 percent. In software, the portfolio holds Microsoft at 20 percent, Alphabet at 15 percent, and Oracle at 20 percent. This is a direct holdings summary only. No indirect exposure is included.",
-    "risk_text": "AI Growth has a hidden concentration in semiconductors. The mapped exposure score is 100. Direct holdings in that sector are Nvidia, Taiwan Semiconductor, and ASML. Indirect exposure comes from Microsoft, Alphabet, and Oracle. These software holdings add semiconductor dependence through their use of Nvidia GPUs for AI and cloud workloads. The chain also runs through Taiwan Semiconductor, which fabricates Nvidia chips, and ASML, whose tools support advanced chip production. These links matter because pressure at one company can affect several holdings at the same time through shared technology and supply dependence.",
+    "holdings_text": "AI Infrastructure holds five assets, led by Hyperscale Data Center Fund.",
+    "risk_text": "Digital Infrastructure is strongest at 60 percent.",
     "holdings_file": "portfolio_1_holdings.mp3",
     "risk_file": "portfolio_1_risk.mp3"
   },
   "2": {
-    "holdings_text": "Everyday Diversified holds seven direct positions. Amazon.com is 20 percent in e-commerce and retail. Procter and Gamble is 15 percent in consumer staples. Visa is 15 percent in payments. Mastercard is 15 percent in payments. Salesforce is 15 percent in software. Coca-Cola is 10 percent in consumer staples. United Parcel Service is 10 percent in logistics. Overall, this mix leans toward payments and consumer brands, with added exposure to retail, software, and logistics.",
-    "risk_text": "Everyday Diversified has a hidden concentration in cloud and data infrastructure. The mapped exposure score is 65. Direct exposure comes from Amazon, which is held in the portfolio. Indirect exposure comes from Visa, Mastercard, and Salesforce. These companies rely on Amazon Web Services or other large cloud providers to run important parts of their operations. That means payment processing, software delivery, and service availability can depend on the same infrastructure. These links matter because different holdings may react to the same operational pressure, even though they sit in different sectors.",
+    "holdings_text": "Housing Ecosystem holds five assets, led by Multifamily Housing Fund.",
+    "risk_text": "Residential Real Estate leads at 85 percent.",
     "holdings_file": "portfolio_2_holdings.mp3",
     "risk_file": "portfolio_2_risk.mp3"
   },
   "3": {
-    "holdings_text": "Energy Transition holds seven direct positions across automotive, industrials, energy, and materials and mining. The largest holding is Albemarle, at 25 percent. Tesla is 20 percent. General Motors is 15 percent. Ford, Caterpillar, Exxon Mobil, and Enphase Energy are each 10 percent. By sector, automotive includes Tesla, General Motors, and Ford. Industrials includes Caterpillar. Energy includes Exxon Mobil and Enphase Energy. Materials and mining includes Albemarle. This is a summary of direct holdings only.",
-    "risk_text": "Energy Transition has a hidden concentration in Battery and Critical Minerals. The mapped exposure score is 80. Direct exposure comes from Albemarle, ticker ALB, which is held in the portfolio. Indirect exposure comes from Tesla, General Motors, Ford, and Enphase. These holdings add exposure because their battery or energy storage businesses depend on lithium and battery-material supply. These links matter because several different holdings can be affected by the same upstream constraint. That means exposure may be more concentrated than it first appears, even across different companies and sectors.",
+    "holdings_text": "Energy Transition holds seven assets, led by Albemarle Corporation.",
+    "risk_text": "Battery and Critical Minerals leads at 80 percent.",
     "holdings_file": "portfolio_3_holdings.mp3",
     "risk_file": "portfolio_3_risk.mp3"
   }
