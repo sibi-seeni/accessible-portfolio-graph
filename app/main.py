@@ -1,13 +1,20 @@
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.audio import STATIC_DIR, AudioUnavailableError, get_portfolio_audio
 from app.db import get_session
 from app.graph import build_portfolio_graph
 from app.insight import get_portfolio_insight
 from app.models import Portfolio
-from app.schemas import PortfolioGraph, PortfolioInsight, PortfolioSummary
+from app.schemas import (
+    PortfolioAudioResponse,
+    PortfolioGraph,
+    PortfolioInsight,
+    PortfolioSummary,
+)
 
 app = FastAPI(title="Portfolio Intelligence API")
 
@@ -18,6 +25,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 @app.get("/health")
@@ -49,3 +58,16 @@ def get_insight(
     if insight is None:
         raise HTTPException(status_code=404, detail="Portfolio not found")
     return insight
+
+
+@app.get("/portfolio/{portfolio_id}/audio", response_model=PortfolioAudioResponse)
+def get_audio(
+    portfolio_id: int, session: Session = Depends(get_session)
+) -> PortfolioAudioResponse:
+    portfolio = session.get(Portfolio, portfolio_id)
+    if portfolio is None:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+    try:
+        return get_portfolio_audio(portfolio_id)
+    except AudioUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc

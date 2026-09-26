@@ -69,3 +69,14 @@ class PortfolioInsight(BaseModel):
     exposure_notes: list[str]
     methodology: str
     narration: str | None = None
+
+
+class AudioItem(BaseModel):
+    url: str
+    transcript: str
+
+
+class PortfolioAudioResponse(BaseModel):
+    portfolio_id: int
+    holdings: AudioItem
+    risk: AudioItem
