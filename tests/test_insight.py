@@ -3,7 +3,13 @@ from decimal import Decimal
 import pytest
 from fastapi.testclient import TestClient
 
-from app.insight import ThemeEdge, WeightedHolding, compute_strongest_theme, compute_theme_insight
+from app.insight import (
+    ThemeEdge,
+    WeightedHolding,
+    compute_strongest_theme,
+    compute_theme_insight,
+    compute_theme_scores,
+)
 from app.main import app
 from scripts.seed import load_demo_data
 
@@ -13,6 +19,34 @@ client = TestClient(app)
 @pytest.fixture
 def demo_data() -> dict:
     return load_demo_data()
+
+
+def _portfolio_inputs(portfolio: dict, data: dict) -> tuple[list[WeightedHolding], list[ThemeEdge]]:
+    """Build algorithm inputs from demo metadata (not from expected_insight)."""
+    holdings = [
+        WeightedHolding(h["ticker"], h["sector"], Decimal(str(h["weight"])))
+        for h in portfolio["holdings"]
+    ]
+    held = {h["ticker"] for h in portfolio["holdings"]}
+    edges = [
+        ThemeEdge(
+            e["id"],
+            e["ticker"],
+            e["exposed_to_ticker"],
+            e["exposure_sector"],
+            e["note"],
+        )
+        for e in data["exposures"]
+        if e["ticker"] in held
+    ]
+    return holdings, edges
+
+
+EXPECTED_STRONGEST_SECTOR = {
+    1: "Digital Infrastructure",
+    2: "Residential Real Estate",
+    3: "Battery & Critical Minerals",
+}
 
 
 def test_all_portfolios_return_an_insight() -> None:
@@ -90,7 +124,54 @@ def test_energy_transition_breakdown() -> None:
     assert body["direct_tickers"] == ["ALB"]
     assert body["indirect_tickers"] == ["TSLA", "GM", "F", "ENPH"]
     assert body["contributing_tickers"] == ["ALB", "TSLA", "GM", "F", "ENPH"]
-    assert body["exposure_edge_ids"] == [10, 11, 12, 13]
+    assert body["exposure_edge_ids"] == [11, 12, 13, 14]
+
+
+@pytest.mark.parametrize("portfolio_id", [1, 2, 3])
+def test_expected_strongest_sector(portfolio_id: int) -> None:
+    body = client.get(f"/portfolio/{portfolio_id}/insight").json()
+    assert body["sector"] == EXPECTED_STRONGEST_SECTOR[portfolio_id]
+
+
+@pytest.mark.parametrize("portfolio_id", [1, 2, 3])
+def test_no_tie_for_strongest_sector(portfolio_id: int, demo_data: dict) -> None:
+    portfolio = next(p for p in demo_data["portfolios"] if p["id"] == portfolio_id)
+    holdings, edges = _portfolio_inputs(portfolio, demo_data)
+    scores = compute_theme_scores(holdings, edges)
+
+    assert scores
+    top_weight = scores[0].combined_weight
+    assert top_weight > 0
+    assert sum(1 for s in scores if s.combined_weight == top_weight) == 1
+    assert scores[0].sector == EXPECTED_STRONGEST_SECTOR[portfolio_id]
+
+
+@pytest.mark.parametrize("portfolio_id", [1, 2, 3])
+def test_breakdown_percentage_and_notes(portfolio_id: int, demo_data: dict) -> None:
+    body = client.get(f"/portfolio/{portfolio_id}/insight").json()
+    assert body["percentage"] > 0
+    assert body["contributing_tickers"]
+    assert body["exposure_notes"]
+    assert all(note.strip() for note in body["exposure_notes"])
+
+
+def test_synthetic_identifier_can_contribute(demo_data: dict) -> None:
+    body = client.get("/portfolio/1/insight").json()
+    synthetic = {"DATA_CENTER_FUND", "PRIVATE_AI_CO", "INFRA_FUND"}
+    assert synthetic & set(body["contributing_tickers"])
+
+    body = client.get("/portfolio/2/insight").json()
+    synthetic = {"MULTIFAMILY_FUND", "RE_CREDIT_FUND", "PRIVATE_HOMEBUILDER"}
+    assert synthetic & set(body["contributing_tickers"])
+
+
+def test_winner_is_derived_not_hardcoded(demo_data: dict) -> None:
+    """The winning sector must follow from holdings+exposures alone."""
+    for portfolio in demo_data["portfolios"]:
+        holdings, edges = _portfolio_inputs(portfolio, demo_data)
+        winner = compute_strongest_theme(holdings, edges)
+        assert winner is not None
+        assert winner.sector == portfolio["expected_insight"]["sector"]
 
 
 def test_duplicate_edges_do_not_double_count_source_holding() -> None:

@@ -6,10 +6,10 @@ from typing import Any
 from sqlalchemy import delete
 
 from app.db import SessionLocal
-from app.models import Exposure, Holding, Portfolio, Sector
+from app.models import EXPOSURE_VIA_VALUES, Exposure, Holding, Portfolio, Sector
 
 DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "demo_data.json"
-ALLOWED_VIA = {"supply_chain", "competitor", "regulatory"}
+ALLOWED_VIA = set(EXPOSURE_VIA_VALUES)
 WEIGHT_TOLERANCE = Decimal("0.0001")
 
 

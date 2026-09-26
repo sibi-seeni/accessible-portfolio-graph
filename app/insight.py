@@ -11,9 +11,15 @@ There is no market-value calculation and no live financial data.
 
 Each curated exposure edge carries an explicit `exposures.exposure_sector`: the
 hidden sector/risk theme that the relationship represents. The theme is NOT
-inferred from the target company's conventional sector. For example, TSLA -> ALB
+inferred from the target asset's conventional sector. For example, TSLA -> ALB
 has exposure_sector "Battery & Critical Minerals" even though ALB's holding
 sector is "Materials & Mining".
+
+Tickers are opaque holding identifiers. They may be public equity symbols
+(e.g. NVDA) or synthetic alternative-asset identifiers (e.g. DATA_CENTER_FUND,
+PRIVATE_AI_CO, MULTIFAMILY_FUND, RE_CREDIT_FUND). The calculation treats every
+holding identically and never validates or resolves a ticker against an
+exchange; no external API is called.
 
 DIRECT SECTOR EXPOSURE
 ----------------------
@@ -25,7 +31,7 @@ B. have their own `holding.sector` equal to S.
 
 INDIRECT SECTOR EXPOSURE
 ------------------------
-A held company contributes its portfolio weight to sector S indirectly when it
+A held asset contributes its portfolio weight to sector S indirectly when it
 is the source `ticker` of a curated exposure edge whose `exposure_sector` is S.
 
 Example:
@@ -158,13 +164,13 @@ def compute_theme_insight(
     )
 
 
-def compute_strongest_theme(
+def compute_theme_scores(
     holdings: Sequence[WeightedHolding],
     edges: Sequence[ThemeEdge],
-) -> ThemeInsight | None:
-    """Return the single strongest theme for the given holdings and edges."""
+) -> list[ThemeInsight]:
+    """Score every candidate theme, strongest first (deterministic tie-break)."""
     if not holdings:
-        return None
+        return []
 
     held_tickers = {holding.ticker for holding in holdings}
     themes = {holding.sector for holding in holdings}
@@ -189,7 +195,16 @@ def compute_strongest_theme(
         ),
         reverse=True,
     )
-    return insights[ranked[0]]
+    return [insights[sector] for sector in ranked]
+
+
+def compute_strongest_theme(
+    holdings: Sequence[WeightedHolding],
+    edges: Sequence[ThemeEdge],
+) -> ThemeInsight | None:
+    """Return the single strongest theme for the given holdings and edges."""
+    scores = compute_theme_scores(holdings, edges)
+    return scores[0] if scores else None
 
 
 def get_portfolio_insight(session: Session, portfolio_id: int) -> PortfolioInsight | None:

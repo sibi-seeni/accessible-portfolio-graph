@@ -8,6 +8,19 @@ class Base(DeclarativeBase):
     pass
 
 
+EXPOSURE_VIA_VALUES: tuple[str, ...] = (
+    "demand_driver",
+    "operating_dependency",
+    "housing_cycle",
+    "lending",
+    "credit_market",
+    "financing_dependency",
+    "supply_chain",
+)
+
+_EXPOSURE_VIA_SQL = ", ".join(f"'{value}'" for value in EXPOSURE_VIA_VALUES)
+
+
 class Portfolio(Base):
     __tablename__ = "portfolios"
 
@@ -46,7 +59,7 @@ class Exposure(Base):
     __tablename__ = "exposures"
     __table_args__ = (
         CheckConstraint(
-            "via IN ('supply_chain', 'competitor', 'regulatory')",
+            f"via IN ({_EXPOSURE_VIA_SQL})",
             name="ck_exposures_via",
         ),
     )

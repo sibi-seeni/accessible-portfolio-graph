@@ -77,12 +77,16 @@ def test_exposures_columns() -> None:
 
 
 def test_exposures_via_check_constraint() -> None:
+    from app.models import EXPOSURE_VIA_VALUES
+
     table = Base.metadata.tables["exposures"]
     checks = [c for c in table.constraints if isinstance(c, CheckConstraint)]
     assert len(checks) == 1
     sqltext = str(checks[0].sqltext)
-    for value in ("supply_chain", "competitor", "regulatory"):
+    for value in EXPOSURE_VIA_VALUES:
         assert value in sqltext
+    assert "competitor" not in sqltext
+    assert "regulatory" not in sqltext
 
 
 def _indexed_columns(table_name: str) -> set[tuple[str, ...]]:

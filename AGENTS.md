@@ -13,7 +13,7 @@
 This is a 24-hour hackathon backend. Optimize for simplicity, reliability, and demo readiness, not production architecture.
 
 Project:
-Accessible Portfolio Explorer. Three static curated demo portfolios are represented as a small knowledge graph. The frontend visualizes holdings, sectors, and hidden exposure relationships. The backend also supports an audio-first mode.
+Accessible Portfolio Explorer. A cross-asset portfolio intelligence graph that reveals shared economic and sector dependencies across public equity, private equity, real estate, private credit, and infrastructure. Three static curated demo portfolios are represented as a small knowledge graph. The frontend visualizes holdings, sectors, and hidden exposure relationships. The backend also supports an audio-first mode.
 
 Backend stack:
 - Python 3.12+
@@ -29,7 +29,7 @@ STRICT SCOPE:
 - Approximately 5-8 holdings each.
 - Approximately 10-15 total hidden exposure relationships.
 - Static data only.
-- No market-data API.
+- No live market-data API.
 - No live filing ingestion.
 - No recursive graph traversal.
 - No Neo4j.
@@ -42,16 +42,37 @@ STRICT SCOPE:
 - Prefer synchronous Python unless async provides an obvious benefit.
 - Keep dependencies minimal.
 
-Database tables:
+Database tables (four-table architecture; do not change):
 1. portfolios(id, name)
 2. sectors(id, name)
 3. holdings(id, portfolio_id, ticker, company_name, shares, sector)
 4. exposures(id, ticker, exposed_to_ticker, via, note)
 
-Exposure via values:
+Asset identifiers (`ticker` / `exposed_to_ticker`):
+`ticker` and `exposed_to_ticker` are legacy field/column names used as stable graph asset identifiers.
+They do NOT imply that every referenced asset is publicly traded.
+- Public equity holdings keep using their real ticker symbol (e.g. NVDA).
+- Alternative assets (private equity, real estate, private credit, infrastructure) use synthetic stable identifiers (e.g. DATA_CENTER_FUND).
+Examples:
+- NVDA = public equity
+- DATA_CENTER_FUND = real-estate investment
+- PRIVATE_AI_CO = private-equity investment
+- RE_CREDIT_FUND = private-credit investment
+
+Terminology:
+- When discussing generic graph nodes, prefer "holding", "asset", or "investment" over "company".
+- Public tickers (e.g. NVDA, LEN, TSLA) are still valid holdings.
+- Alternative assets use synthetic stable identifiers.
+- The legacy `company_name` column stores the display name for any holding, including alternative assets.
+
+Exposure via values (use only these; do not invent additional relationship types):
+- demand_driver
+- operating_dependency
+- housing_cycle
+- lending
+- credit_market
+- financing_dependency
 - supply_chain
-- competitor
-- regulatory
 
 Core insight:
 For a selected portfolio, combine direct sector exposure with curated indirect exposure. Return exactly one strongest hidden-sector concentration insight when possible.
