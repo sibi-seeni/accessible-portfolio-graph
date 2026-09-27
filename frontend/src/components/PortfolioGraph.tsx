@@ -97,6 +97,7 @@ interface TypedForceGraphProps {
   cooldownTicks?: number;
   onEngineStop?: () => void;
   onNodeClick?: (node: GraphNodeObject) => void;
+  onNodeHover?: (node: GraphNodeObject | null) => void;
   onBackgroundClick?: () => void;
   linkDirectionalParticles?: (link: GraphLinkObject) => number;
   linkDirectionalParticleWidth?: (link: GraphLinkObject) => number;
@@ -286,6 +287,7 @@ export function PortfolioGraph({
   const graphRef = useRef<ForceGraphHandle | undefined>(undefined);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
   const data = useMemo(
     () => ({
@@ -318,9 +320,9 @@ export function PortfolioGraph({
         "Interactive portfolio graph. Use the holding detail panel for accessible node information."
       );
       canvas.setAttribute("role", "img");
-      canvas.setAttribute("tabIndex", isAudioVisualMode ? "0" : "-1");
+      canvas.setAttribute("tabIndex", isAudioVisualMode && graphData ? "0" : "-1");
     }
-  }, [size.width, size.height, isAudioVisualMode]);
+  }, [size.width, size.height, isAudioVisualMode, graphData]);
 
   useEffect(() => {
     if (!isAudioVisualMode) {
@@ -556,7 +558,7 @@ export function PortfolioGraph({
   return (
     <Container
       ref={containerRef}
-      tabIndex={isAudioVisualMode ? 0 : -1}
+      tabIndex={isAudioVisualMode && graphData ? 0 : -1}
       onKeyDown={handleKeyDown}
     >
       {size.width > 0 && size.height > 0 && (
@@ -606,6 +608,17 @@ export function PortfolioGraph({
             } else {
               onNodeClick?.(null);
             }
+          }}
+          onNodeHover={(node) => {
+            if (!isAudioVisualMode) return;
+            if (!node) {
+              setHoveredNodeId(null);
+              return;
+            }
+            if (node.type !== "holding") return;
+            if (node.id === hoveredNodeId) return;
+            setHoveredNodeId(node.id);
+            void playNodeTone(node.sector, node.x ?? 0, size.width);
           }}
           onBackgroundClick={() => onNodeClick?.(null)}
         />
