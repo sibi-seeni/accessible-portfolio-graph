@@ -18,7 +18,7 @@ import {
   type AssetClass,
 } from "../config/visualConfig";
 
-interface HoldingNode {
+export interface HoldingNode {
   id: string;
   type: "holding";
   label: string;
@@ -96,11 +96,19 @@ interface TypedForceGraphProps {
     ctx: CanvasRenderingContext2D,
     globalScale: number
   ) => void;
+  nodePointerAreaPaint?: (
+    node: GraphNodeObject,
+    color: string,
+    ctx: CanvasRenderingContext2D,
+    globalScale: number
+  ) => void;
   d3AlphaDecay?: number;
   d3VelocityDecay?: number;
   warmupTicks?: number;
   cooldownTicks?: number;
   onEngineStop?: () => void;
+  onNodeClick?: (node: GraphNodeObject) => void;
+  onBackgroundClick?: () => void;
   linkDirectionalParticles?: (link: GraphLinkObject) => number;
   linkDirectionalParticleWidth?: (link: GraphLinkObject) => number;
   linkDirectionalParticleSpeed?: number;
@@ -111,6 +119,9 @@ const TypedForceGraph2D = ForceGraph2D as unknown as FC<TypedForceGraphProps>;
 
 interface PortfolioGraphProps {
   portfolioId: number;
+  onNodeClick?: (node: HoldingNode | null) => void;
+  selectedNodeId?: string | null;
+  contributingTickers?: string[];
 }
 
 const Container = styled.div`
@@ -376,7 +387,12 @@ function getEdgeStyle(link: GraphLinkObject): EdgeStyle {
   return { strokeStyle: "#3D8FB0", lineWidth: 1.2, alpha: 0.7, dash: [6, 3] };
 }
 
-export function PortfolioGraph({ portfolioId }: PortfolioGraphProps) {
+export function PortfolioGraph({
+  portfolioId,
+  onNodeClick,
+  selectedNodeId,
+  contributingTickers = [],
+}: PortfolioGraphProps) {
   const graph = graphs[portfolioId] as PortfolioGraphData | undefined;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const graphRef = useRef<ForceGraphHandle | undefined>(undefined);
@@ -472,6 +488,45 @@ export function PortfolioGraph({ portfolioId }: PortfolioGraphProps) {
       ctx.stroke();
       ctx.globalAlpha = 1;
 
+      if (contributingTickers.includes(node.ticker)) {
+        const t = Date.now() / 1000;
+
+        [0, 0.4].forEach((phaseOffset) => {
+          const pulse = (Math.sin(t * 2.5 + phaseOffset) + 1) / 2;
+          const ringRadius = r + 6 + pulse * 8;
+          const ringAlpha = 0.6 - pulse * 0.5;
+
+          ctx.beginPath();
+          ctx.arc(x, y, ringRadius, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(220, 60, 60, ${ringAlpha})`;
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([]);
+          ctx.stroke();
+        });
+
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(220, 60, 60, 0.15)";
+        ctx.fill();
+      }
+
+      if (node.id === selectedNodeId) {
+        ctx.beginPath();
+        ctx.arc(x, y, r + 5, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(61, 143, 176, 0.9)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 3]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.beginPath();
+        ctx.arc(x, y, r + 9, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(61, 143, 176, 0.25)";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([]);
+        ctx.stroke();
+      }
+
       drawLabel(
         ctx,
         x,
@@ -483,7 +538,7 @@ export function PortfolioGraph({ portfolioId }: PortfolioGraphProps) {
         "rgba(240, 240, 235, 0.82)"
       );
     },
-    []
+    [selectedNodeId, contributingTickers]
   );
 
   const linkCanvasObject = useCallback(
@@ -520,6 +575,14 @@ export function PortfolioGraph({ portfolioId }: PortfolioGraphProps) {
           nodeLabel={() => ""}
           nodeCanvasObjectMode={() => "replace"}
           nodeCanvasObject={nodeCanvasObject}
+          nodePointerAreaPaint={(node, color, ctx) => {
+            const r =
+              node.type === "sector" ? 18 : 8 + (node.weight ?? 0.1) * 32;
+            ctx.beginPath();
+            ctx.arc(node.x ?? 0, node.y ?? 0, r + 6, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+          }}
           linkCanvasObjectMode={() => "replace"}
           linkCanvasObject={linkCanvasObject}
           d3AlphaDecay={0.02}
@@ -540,6 +603,14 @@ export function PortfolioGraph({ portfolioId }: PortfolioGraphProps) {
             if (group === "housing_cycle") return "#C97B3D";
             return "#ffffff";
           }}
+          onNodeClick={(node) => {
+            if (node.type === "holding") {
+              onNodeClick?.(node);
+            } else {
+              onNodeClick?.(null);
+            }
+          }}
+          onBackgroundClick={() => onNodeClick?.(null)}
         />
       )}
       <Legend />

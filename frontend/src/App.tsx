@@ -1,9 +1,11 @@
 import { useState } from "react";
 import styled from "styled-components";
-import { portfolios } from "./mocks/fixtures";
+import { portfolios, insights } from "./mocks/fixtures";
 import { PortfolioSelector } from "./components/PortfolioSelector";
 import { ModeToggle, type Mode } from "./components/ModeToggle";
-import { PortfolioGraph } from "./components/PortfolioGraph";
+import { PortfolioGraph, type HoldingNode } from "./components/PortfolioGraph";
+import { HoldingDetailPanel } from "./components/HoldingDetailPanel";
+import { InsightCard } from "./components/InsightCard";
 import { ParticleField } from "./components/ParticleField";
 import { GlobalStyles } from "./styles/GlobalStyles";
 
@@ -81,11 +83,23 @@ const Vignette = styled.div`
   );
 `;
 
+interface InsightData {
+  contributing_tickers: string[];
+}
+
 function App() {
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<number>(1);
   const [mode, setMode] = useState<Mode>("visual");
+  const [selectedNode, setSelectedNode] = useState<HoldingNode | null>(null);
 
-  const handleSelect = (id: number) => setSelectedPortfolioId(id);
+  const contributingTickers = (
+    insights[selectedPortfolioId] as InsightData
+  ).contributing_tickers;
+
+  const handleSelect = (id: number) => {
+    setSelectedNode(null);
+    setSelectedPortfolioId(id);
+  };
 
   return (
     <>
@@ -108,11 +122,24 @@ function App() {
                 const isActive = portfolio.id === selectedPortfolioId;
                 return (
                   <GraphLayer key={portfolio.id} $isActive={isActive}>
-                    <PortfolioGraph portfolioId={portfolio.id} />
+                    <PortfolioGraph
+                      portfolioId={portfolio.id}
+                      onNodeClick={setSelectedNode}
+                      selectedNodeId={selectedNode?.id ?? null}
+                      contributingTickers={contributingTickers}
+                    />
                   </GraphLayer>
                 );
               })}
               <Vignette />
+              {selectedNode && (
+                <HoldingDetailPanel
+                  node={selectedNode}
+                  portfolioId={selectedPortfolioId}
+                  onClose={() => setSelectedNode(null)}
+                />
+              )}
+              <InsightCard portfolioId={selectedPortfolioId} />
             </>
           ) : (
             <Placeholder>Audio mode coming soon</Placeholder>
