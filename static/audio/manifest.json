@@ -1,19 +1,19 @@
 {
   "1": {
-    "holdings_text": "AI Infrastructure holds five assets, led by Hyperscale Data Center Fund.",
-    "risk_text": "Digital Infrastructure is strongest at 60 percent.",
+    "holdings_text": "AI Infrastructure holds a mix of public equities and fund investments across semiconductors, software, digital infrastructure, utilities, and energy infrastructure. The largest holding is Renewable Infrastructure Fund at 25 percent. NVIDIA Corporation represents 20 percent. Private AI Software Co. also represents 20 percent. Hyperscale Data Center Fund represents 20 percent. NextEra Energy, Inc. represents 15 percent. This is a concentrated portfolio with direct holdings in both operating businesses and infrastructure-focused funds.",
+    "risk_text": "This portfolio has a mapped exposure score of 60 to digital infrastructure. The direct exposure comes from Hyperscale Data Center Fund. Indirect exposure comes from NVIDIA Corporation and Private AI Software Co. NVIDIA supports demand for high-density data center capacity used for AI training and inference. Private AI Software Co. also depends on scalable compute infrastructure hosted in data centers. These links matter because the portfolio’s AI theme is not only tied to software and chips. It also relies on the underlying data center capacity that supports those workloads.",
     "holdings_file": "portfolio_1_holdings.mp3",
     "risk_file": "portfolio_1_risk.mp3"
   },
   "2": {
-    "holdings_text": "Housing Ecosystem holds five assets, led by Multifamily Housing Fund.",
-    "risk_text": "Residential Real Estate leads at 85 percent.",
+    "holdings_text": "Housing Ecosystem holds a mix of public equity, private investment, real estate fund exposure, and private credit fund exposure. The sectors are homebuilding, residential real estate, real estate credit, and financials. Direct holdings are Lennar Corporation at 20 percent, Sunbelt Residential Partners at 20 percent, Multifamily Housing Fund at 25 percent, Real Estate Credit Fund at 20 percent, and JPMorgan Chase & Co. at 15 percent. This portfolio is centered on housing-related assets, with added exposure to lending and financial services.",
+    "risk_text": "This portfolio has a mapped exposure score of 85 to residential real estate. Direct exposure comes from Multifamily Housing Fund. Indirect exposure comes from Lennar Corporation, Sunbelt Residential Partners, and Real Estate Credit Fund. These links matter because they can respond to the same housing forces at the same time. Those forces include household formation, housing affordability, residential demand, and regional housing demand. Real Estate Credit Fund also adds look-through exposure because it finances residential properties similar to those owned by Multifamily Housing Fund. JPMorgan Chase & Co. is outside this mapped concentration.",
     "holdings_file": "portfolio_2_holdings.mp3",
     "risk_file": "portfolio_2_risk.mp3"
   },
   "3": {
-    "holdings_text": "Energy Transition holds seven assets, led by Albemarle Corporation.",
-    "risk_text": "Battery and Critical Minerals leads at 80 percent.",
+    "holdings_text": "Energy Transition holds direct public equity investments across automotive, industrials, energy, and materials and mining. The largest holding is Albemarle Corporation at 25 percent of the portfolio. Tesla, Inc. represents 20 percent. General Motors Company is 15 percent. Ford Motor Company is 10 percent. Caterpillar Inc. is 10 percent. Exxon Mobil Corporation is 10 percent. Enphase Energy, Inc. is 10 percent. The mix is led by automotive holdings, with added exposure to industrial equipment, traditional energy, solar-related energy technology, and battery materials.",
+    "risk_text": "This portfolio has a hidden concentration in battery and critical minerals. The mapped exposure score is 80. Direct exposure comes from Albemarle Corporation, which is held directly and sits in that sector. Indirect exposure comes through Tesla, Inc., General Motors Company, Ford Motor Company, and Enphase Energy, Inc. These holdings rely on lithium and related battery materials through their electric-vehicle or battery storage activities. These links matter because several investments can be affected by the same supply chain, even when they sit in different sectors.",
     "holdings_file": "portfolio_3_holdings.mp3",
     "risk_file": "portfolio_3_risk.mp3"
   }
