@@ -1,3 +1,4 @@
+import { useRef, type KeyboardEvent } from "react";
 import styled from "styled-components";
 
 interface Portfolio {
@@ -69,17 +70,36 @@ export function PortfolioSelector({
   selectedId,
   onSelect,
 }: PortfolioSelectorProps) {
+  const buttonRefs = useRef<HTMLButtonElement[]>([]);
+
+  const handleKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    index: number
+  ) => {
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    event.preventDefault();
+    const delta = event.key === "ArrowDown" ? 1 : -1;
+    const next =
+      (index + delta + portfolios.length) % portfolios.length;
+    buttonRefs.current[next]?.focus();
+  };
+
   return (
     <Wrapper>
       <SectionLabel>Portfolios</SectionLabel>
-      <List>
-        {portfolios.map((portfolio) => (
+      <List role="group" aria-label="Portfolio selection">
+        {portfolios.map((portfolio, index) => (
           <Item
             key={portfolio.id}
             type="button"
+            ref={(element) => {
+              if (element) buttonRefs.current[index] = element;
+            }}
             $selected={portfolio.id === selectedId}
             aria-pressed={portfolio.id === selectedId}
+            aria-label={`Select ${portfolio.name} portfolio`}
             onClick={() => onSelect(portfolio.id)}
+            onKeyDown={(event) => handleKeyDown(event, index)}
           >
             {portfolio.name}
           </Item>

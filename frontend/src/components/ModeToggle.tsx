@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import * as Tone from "tone";
 
 export type Mode = "visual" | "audio";
 
@@ -52,11 +53,12 @@ export function ModeToggle({ mode, onToggle }: ModeToggleProps) {
   return (
     <Wrapper>
       <SectionLabel>Mode</SectionLabel>
-      <Group role="group" aria-label="Display mode">
+      <Group role="group" aria-label="Display mode selection">
         <Item
           type="button"
           $active={mode === "visual"}
           aria-pressed={mode === "visual"}
+          aria-label="Visual mode"
           onClick={() => onToggle("visual")}
         >
           Visual
@@ -65,7 +67,15 @@ export function ModeToggle({ mode, onToggle }: ModeToggleProps) {
           type="button"
           $active={mode === "audio"}
           aria-pressed={mode === "audio"}
-          onClick={() => onToggle("audio")}
+          aria-label="Audio-First mode"
+          onClick={() => {
+            try {
+              void Tone.start().catch(() => {});
+            } catch {
+              // ignore audio-context unlock failures
+            }
+            onToggle("audio");
+          }}
         >
           Audio-First
         </Item>

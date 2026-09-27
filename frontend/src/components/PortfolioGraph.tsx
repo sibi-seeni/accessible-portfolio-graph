@@ -10,12 +10,16 @@ import {
 import styled from "styled-components";
 import ForceGraph2D from "react-force-graph-2d";
 import { graphs } from "../mocks/fixtures";
+import type {
+  GraphEdge as PortfolioGraphEdge,
+  GraphNode as PortfolioGraphNode,
+  PortfolioGraph as PortfolioGraphData,
+} from "../hooks/usePortfolioData";
 import {
   ASSET_CLASS_SHAPE,
   SECTOR_COLOR,
   TICKER_ASSET_CLASS,
   VIA_TO_GROUP,
-  type AssetClass,
 } from "../config/visualConfig";
 
 export interface HoldingNode {
@@ -35,23 +39,6 @@ interface SectorNode {
 
 type GraphNode = HoldingNode | SectorNode;
 
-interface ExposureEdge {
-  id: string;
-  source: string;
-  target: string;
-  type: string;
-  label: string | null;
-  note: string | null;
-  exposure_sector?: string;
-}
-
-interface PortfolioGraphData {
-  portfolio_id: number;
-  portfolio_name: string;
-  nodes: GraphNode[];
-  edges: ExposureEdge[];
-}
-
 type GraphNodeObject = GraphNode & {
   x?: number;
   y?: number;
@@ -61,7 +48,7 @@ type GraphNodeObject = GraphNode & {
   fy?: number;
 };
 
-type GraphLinkObject = Omit<ExposureEdge, "source" | "target"> & {
+type GraphLinkObject = Omit<PortfolioGraphEdge, "source" | "target"> & {
   source: string | GraphNodeObject;
   target: string | GraphNodeObject;
 };
@@ -79,7 +66,7 @@ interface ForceGraphHandle {
 
 interface TypedForceGraphProps {
   ref?: Ref<ForceGraphHandle | undefined>;
-  graphData: { nodes: GraphNodeObject[]; links: GraphLinkObject[] };
+  graphData: { nodes: PortfolioGraphNode[]; links: PortfolioGraphEdge[] };
   width?: number;
   height?: number;
   backgroundColor?: string;
@@ -119,9 +106,12 @@ const TypedForceGraph2D = ForceGraph2D as unknown as FC<TypedForceGraphProps>;
 
 interface PortfolioGraphProps {
   portfolioId: number;
+  graphData?: PortfolioGraphData | null;
   onNodeClick?: (node: HoldingNode | null) => void;
   selectedNodeId?: string | null;
   contributingTickers?: string[];
+  queryHighlightNodeIds?: string[];
+  queryHighlightEdgeIds?: string[];
 }
 
 const Container = styled.div`
@@ -130,147 +120,10 @@ const Container = styled.div`
   height: 100%;
 `;
 
-const LegendBox = styled.div`
-  position: absolute;
-  bottom: 24px;
-  left: 24px;
-  background: rgba(240, 240, 235, 0.88);
-  border: 1px solid rgba(26, 32, 53, 0.15);
-  border-radius: 10px;
-  padding: 14px 18px;
-  min-width: 200px;
-`;
-
-const LegendTitle = styled.div`
-  color: #888899;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  margin-bottom: 8px;
-`;
-
-const LegendRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 6px;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-`;
-
-const LegendLabel = styled.span`
-  font-size: 12px;
-  color: #1a1d2e;
-`;
-
-const LegendDivider = styled.div`
-  height: 1px;
-  background: rgba(26, 32, 53, 0.12);
-  margin: 10px 0;
-`;
-
 const SECTOR_RADIUS = 18;
 
 function truncate(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max)}…` : text;
-}
-
-const ASSET_CLASS_LEGEND: { assetClass: AssetClass; label: string }[] = [
-  { assetClass: "public_equity", label: "Public Equity" },
-  { assetClass: "private_equity", label: "Private Equity" },
-  { assetClass: "real_estate", label: "Real Estate" },
-  { assetClass: "private_credit", label: "Private Credit" },
-  { assetClass: "infrastructure", label: "Infrastructure" },
-];
-
-interface ExposureLegendRow {
-  label: string;
-  stroke: string;
-  dash?: string;
-  opacity?: number;
-}
-
-const EXPOSURE_LEGEND: ExposureLegendRow[] = [
-  { label: "Cash-flow linked", stroke: "#3D8FB0", dash: "6,3" },
-  { label: "Financing linked", stroke: "#8B6DAF", dash: "2,4" },
-  { label: "Housing cycle", stroke: "#C97B3D" },
-  { label: "Sector membership", stroke: "#666666", opacity: 0.6 },
-];
-
-function AssetClassIcon({ assetClass }: { assetClass: AssetClass }) {
-  const fill = "#444455";
-
-  switch (assetClass) {
-    case "private_equity":
-      return (
-        <svg width={20} height={20} viewBox="0 0 20 20" aria-hidden="true">
-          <rect x={4} y={4} width={12} height={12} fill={fill} />
-        </svg>
-      );
-    case "real_estate":
-      return (
-        <svg width={20} height={20} viewBox="0 0 20 20" aria-hidden="true">
-          <polygon points="10,2 18,10 18,18 2,18 2,10" fill={fill} />
-        </svg>
-      );
-    case "private_credit":
-      return (
-        <svg width={20} height={20} viewBox="0 0 20 20" aria-hidden="true">
-          <polygon points="10,2 18,10 10,18 2,10" fill={fill} />
-        </svg>
-      );
-    case "infrastructure":
-      return (
-        <svg width={20} height={20} viewBox="0 0 20 20" aria-hidden="true">
-          <polygon
-            points="18,10 14,16.93 6,16.93 2,10 6,3.07 14,3.07"
-            fill={fill}
-          />
-        </svg>
-      );
-    case "public_equity":
-    default:
-      return (
-        <svg width={20} height={20} viewBox="0 0 20 20" aria-hidden="true">
-          <circle cx={10} cy={10} r={6} fill={fill} />
-        </svg>
-      );
-  }
-}
-
-function Legend() {
-  return (
-    <LegendBox>
-      <LegendTitle>Asset Class</LegendTitle>
-      {ASSET_CLASS_LEGEND.map((row) => (
-        <LegendRow key={row.assetClass}>
-          <AssetClassIcon assetClass={row.assetClass} />
-          <LegendLabel>{row.label}</LegendLabel>
-        </LegendRow>
-      ))}
-      <LegendDivider />
-      <LegendTitle>Exposure Type</LegendTitle>
-      {EXPOSURE_LEGEND.map((row) => (
-        <LegendRow key={row.label}>
-          <svg width={32} height={12} aria-hidden="true">
-            <line
-              x1={1}
-              y1={6}
-              x2={31}
-              y2={6}
-              stroke={row.stroke}
-              strokeWidth={2}
-              strokeDasharray={row.dash}
-              opacity={row.opacity}
-            />
-          </svg>
-          <LegendLabel>{row.label}</LegendLabel>
-        </LegendRow>
-      ))}
-    </LegendBox>
-  );
 }
 
 function drawHoldingShape(
@@ -387,23 +240,46 @@ function getEdgeStyle(link: GraphLinkObject): EdgeStyle {
   return { strokeStyle: "#3D8FB0", lineWidth: 1.2, alpha: 0.7, dash: [6, 3] };
 }
 
+function drawQueryHighlightRing(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  baseR: number
+): void {
+  const t = Date.now() / 1000;
+  const pulse = (Math.sin(t * 3) + 1) / 2;
+  const ringRadius = baseR + 7 + pulse * 6;
+  const ringAlpha = 0.7 - pulse * 0.4;
+
+  ctx.beginPath();
+  ctx.arc(x, y, ringRadius, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(212, 175, 55, ${ringAlpha})`;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([]);
+  ctx.stroke();
+}
+
 export function PortfolioGraph({
   portfolioId,
+  graphData,
   onNodeClick,
   selectedNodeId,
   contributingTickers = [],
+  queryHighlightNodeIds = [],
+  queryHighlightEdgeIds = [],
 }: PortfolioGraphProps) {
-  const graph = graphs[portfolioId] as PortfolioGraphData | undefined;
+  const fixtureGraph = graphs[portfolioId] as PortfolioGraphData | undefined;
+  const source = graphData ?? fixtureGraph;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const graphRef = useRef<ForceGraphHandle | undefined>(undefined);
   const [size, setSize] = useState({ width: 0, height: 0 });
 
-  const graphData = useMemo(
+  const data = useMemo(
     () => ({
-      nodes: (graph?.nodes ?? []).map((node) => ({ ...node })),
-      links: (graph?.edges ?? []).map((edge) => ({ ...edge })),
+      nodes: (source?.nodes ?? []).map((node) => ({ ...node })),
+      links: (source?.edges ?? []).map((edge) => ({ ...edge })),
     }),
-    [graph]
+    [source]
   );
 
   useEffect(() => {
@@ -420,6 +296,18 @@ export function PortfolioGraph({
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    const canvas = containerRef.current?.querySelector("canvas");
+    if (canvas) {
+      canvas.setAttribute(
+        "aria-label",
+        "Interactive portfolio graph. Use the holding detail panel for accessible node information."
+      );
+      canvas.setAttribute("role", "img");
+      canvas.setAttribute("tabIndex", "0");
+    }
+  }, [size.width, size.height]);
 
   useEffect(() => {
     const forceGraph = graphRef.current;
@@ -452,13 +340,14 @@ export function PortfolioGraph({
         ctx.shadowBlur = 12;
         ctx.beginPath();
         ctx.arc(x, y, SECTOR_RADIUS, 0, 2 * Math.PI);
-        ctx.fillStyle = color;
-        ctx.fill();
-        ctx.globalAlpha = 0.4;
         ctx.strokeStyle = color;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2.5;
         ctx.stroke();
         ctx.restore();
+
+        if (queryHighlightNodeIds.includes(node.id)) {
+          drawQueryHighlightRing(ctx, x, y, SECTOR_RADIUS);
+        }
 
         drawLabel(
           ctx,
@@ -487,6 +376,10 @@ export function PortfolioGraph({
       ctx.lineWidth = 1.5;
       ctx.stroke();
       ctx.globalAlpha = 1;
+
+      if (queryHighlightNodeIds.includes(node.id)) {
+        drawQueryHighlightRing(ctx, x, y, r);
+      }
 
       if (contributingTickers.includes(node.ticker)) {
         const t = Date.now() / 1000;
@@ -538,7 +431,7 @@ export function PortfolioGraph({
         "rgba(240, 240, 235, 0.82)"
       );
     },
-    [selectedNodeId, contributingTickers]
+    [selectedNodeId, contributingTickers, queryHighlightNodeIds]
   );
 
   const linkCanvasObject = useCallback(
@@ -553,6 +446,12 @@ export function PortfolioGraph({
       ctx.globalAlpha = alpha;
       ctx.strokeStyle = strokeStyle;
       ctx.lineWidth = lineWidth;
+
+      if (queryHighlightEdgeIds.includes(link.id)) {
+        ctx.lineWidth = ctx.lineWidth + 1.5;
+        ctx.strokeStyle = "rgba(212, 175, 55, 0.9)";
+      }
+
       ctx.beginPath();
       ctx.moveTo(source.x ?? 0, source.y ?? 0);
       ctx.lineTo(target.x ?? 0, target.y ?? 0);
@@ -560,7 +459,7 @@ export function PortfolioGraph({
       ctx.setLineDash([]);
       ctx.globalAlpha = 1;
     },
-    []
+    [queryHighlightEdgeIds]
   );
 
   return (
@@ -568,7 +467,7 @@ export function PortfolioGraph({
       {size.width > 0 && size.height > 0 && (
         <TypedForceGraph2D
           ref={graphRef}
-          graphData={graphData}
+          graphData={data}
           width={size.width}
           height={size.height}
           backgroundColor="rgba(0,0,0,0)"
@@ -613,7 +512,28 @@ export function PortfolioGraph({
           onBackgroundClick={() => onNodeClick?.(null)}
         />
       )}
-      <Legend />
+      <div
+        role="status"
+        aria-live="polite"
+        aria-label="Graph status"
+        style={{
+          position: "absolute",
+          width: "1px",
+          height: "1px",
+          overflow: "hidden",
+          clip: "rect(0,0,0,0)",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {source
+          ? `${source.portfolio_name} portfolio graph loaded with ${
+              source.nodes.filter((node) => node.type === "holding").length
+            } holdings and ${
+              source.edges.filter((edge) => edge.type !== "belongs_to_sector")
+                .length
+            } exposure connections.`
+          : "Loading graph..."}
+      </div>
     </Container>
   );
 }

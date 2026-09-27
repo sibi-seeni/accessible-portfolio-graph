@@ -1,12 +1,23 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import styled from "styled-components";
-import { portfolios, insights } from "./mocks/fixtures";
+import {
+  audio as fixtureAudio,
+  graphs as fixtureGraphs,
+} from "./mocks/fixtures";
 import { PortfolioSelector } from "./components/PortfolioSelector";
 import { ModeToggle, type Mode } from "./components/ModeToggle";
 import { PortfolioGraph, type HoldingNode } from "./components/PortfolioGraph";
 import { HoldingDetailPanel } from "./components/HoldingDetailPanel";
 import { InsightCard } from "./components/InsightCard";
+import { QueryPanel, type QueryResult } from "./components/QueryPanel";
+import { Legend } from "./components/Legend";
+import { AudioFirstMode } from "./components/AudioFirstMode";
 import { ParticleField } from "./components/ParticleField";
+import {
+  usePortfolioData,
+  type PortfolioAudio,
+  type PortfolioGraph as PortfolioGraphData,
+} from "./hooks/usePortfolioData";
 import { GlobalStyles } from "./styles/GlobalStyles";
 
 const Shell = styled.div`
@@ -20,16 +31,33 @@ const Sidebar = styled.aside`
   position: absolute;
   top: 0;
   left: 0;
-  height: 100%;
+  height: 100vh;
   width: 260px;
   z-index: 10;
-  pointer-events: none;
-  padding: 28px 20px;
+  pointer-events: auto;
+  padding: 28px 20px 32px;
   display: flex;
   flex-direction: column;
   gap: 24px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
   background: none;
   border: none;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(26, 32, 53, 0.15);
+    border-radius: 3px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(26, 32, 53, 0.25);
+  }
 `;
 
 const Title = styled.h1`
@@ -51,9 +79,14 @@ const Main = styled.main`
   overflow: hidden;
 `;
 
-const Placeholder = styled.p`
-  color: #1a1d2e;
-  font-size: 16px;
+const LoadingText = styled.div`
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 13px;
+  color: #888899;
+  z-index: 30;
 `;
 
 const GraphLayer = styled.div<{ $isActive: boolean }>`
@@ -83,18 +116,32 @@ const Vignette = styled.div`
   );
 `;
 
-interface InsightData {
-  contributing_tickers: string[];
-}
-
 function App() {
   const [selectedPortfolioId, setSelectedPortfolioId] = useState<number>(1);
   const [mode, setMode] = useState<Mode>("visual");
   const [selectedNode, setSelectedNode] = useState<HoldingNode | null>(null);
+  const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
 
-  const contributingTickers = (
-    insights[selectedPortfolioId] as InsightData
-  ).contributing_tickers;
+  const { portfolios, graph, insight, audio, loading } =
+    usePortfolioData(selectedPortfolioId);
+
+  const activeGraph =
+    graph ?? (fixtureGraphs[selectedPortfolioId] as PortfolioGraphData);
+  const activeAudio =
+    audio ?? (fixtureAudio[selectedPortfolioId] as PortfolioAudio);
+  const currentPortfolio = useMemo(
+    () => ({
+      id: selectedPortfolioId,
+      name: activeGraph.portfolio_name,
+      holdings: activeGraph.nodes.filter((node) => node.type === "holding"),
+      sectors: activeGraph.nodes.filter((node) => node.type === "sector"),
+      audio: activeAudio,
+    }),
+    [selectedPortfolioId, activeGraph, activeAudio]
+  );
+  const contributingTickers = insight?.contributing_tickers ?? [];
+  const queryHighlightNodeIds = queryResult?.highlight_node_ids ?? [];
+  const queryHighlightEdgeIds = queryResult?.highlight_edge_ids ?? [];
 
   const handleSelect = (id: number) => {
     setSelectedNode(null);
@@ -105,16 +152,44 @@ function App() {
     <>
       <GlobalStyles />
       <Shell>
-        <Sidebar>
-          <Title>Portfolio Graph</Title>
+        <a
+          href="#graph-main"
+          style={{
+            position: "absolute",
+            left: "-9999px",
+            top: "auto",
+            width: "1px",
+            height: "1px",
+            overflow: "hidden",
+          }}
+          onFocus={(event) => {
+            event.currentTarget.style.left = "16px";
+          }}
+          onBlur={(event) => {
+            event.currentTarget.style.left = "-9999px";
+          }}
+        >
+          Skip to graph
+        </a>
+        <Sidebar role="navigation" aria-label="Portfolio controls">
+          <Title>Xposure</Title>
           <PortfolioSelector
             portfolios={portfolios}
             selectedId={selectedPortfolioId}
             onSelect={handleSelect}
           />
           <ModeToggle mode={mode} onToggle={setMode} />
+          <QueryPanel
+            portfolioId={selectedPortfolioId}
+            onResult={setQueryResult}
+          />
+          <Legend />
         </Sidebar>
-        <Main>
+        <Main
+          id="graph-main"
+          role="main"
+          aria-label="Portfolio graph visualization"
+        >
           {mode === "visual" ? (
             <>
               <ParticleField />
@@ -124,9 +199,12 @@ function App() {
                   <GraphLayer key={portfolio.id} $isActive={isActive}>
                     <PortfolioGraph
                       portfolioId={portfolio.id}
+                      graphData={isActive ? activeGraph : undefined}
                       onNodeClick={setSelectedNode}
                       selectedNodeId={selectedNode?.id ?? null}
                       contributingTickers={contributingTickers}
+                      queryHighlightNodeIds={queryHighlightNodeIds}
+                      queryHighlightEdgeIds={queryHighlightEdgeIds}
                     />
                   </GraphLayer>
                 );
@@ -135,15 +213,22 @@ function App() {
               {selectedNode && (
                 <HoldingDetailPanel
                   node={selectedNode}
-                  portfolioId={selectedPortfolioId}
+                  graph={activeGraph}
                   onClose={() => setSelectedNode(null)}
                 />
               )}
-              <InsightCard portfolioId={selectedPortfolioId} />
+              {insight && audio && (
+                <InsightCard
+                  portfolioId={selectedPortfolioId}
+                  insight={insight}
+                  audio={audio}
+                />
+              )}
             </>
           ) : (
-            <Placeholder>Audio mode coming soon</Placeholder>
+            <AudioFirstMode portfolio={currentPortfolio} />
           )}
+          {loading && <LoadingText>Loading portfolio data…</LoadingText>}
         </Main>
       </Shell>
     </>

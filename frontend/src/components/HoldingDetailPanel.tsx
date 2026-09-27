@@ -1,30 +1,17 @@
+import { useEffect, useRef, type KeyboardEvent } from "react";
 import styled from "styled-components";
-import { graphs } from "../mocks/fixtures";
 import {
   SECTOR_COLOR,
   TICKER_ASSET_CLASS,
   VIA_TO_GROUP,
   type AssetClass,
 } from "../config/visualConfig";
+import type { PortfolioGraph } from "../hooks/usePortfolioData";
 import type { HoldingNode } from "./PortfolioGraph";
-
-interface ExposureEdge {
-  id: string;
-  source: string;
-  target: string;
-  type: string;
-  label: string | null;
-  note: string | null;
-  exposure_sector?: string;
-}
-
-interface PortfolioGraphData {
-  edges: ExposureEdge[];
-}
 
 interface HoldingDetailPanelProps {
   node: HoldingNode;
-  portfolioId: number;
+  graph: PortfolioGraph;
   onClose: () => void;
 }
 
@@ -181,11 +168,22 @@ const ChipNote = styled.div`
 
 export function HoldingDetailPanel({
   node,
-  portfolioId,
+  graph,
   onClose,
 }: HoldingDetailPanelProps) {
-  const graph = graphs[portfolioId] as PortfolioGraphData | undefined;
-  const exposureEdges = (graph?.edges ?? []).filter(
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    closeRef.current?.focus();
+  }, [node.id]);
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape") {
+      onClose();
+    }
+  };
+
+  const exposureEdges = graph.edges.filter(
     (edge) =>
       edge.type !== "belongs_to_sector" &&
       (edge.source === node.id || edge.target === node.id)
@@ -193,20 +191,34 @@ export function HoldingDetailPanel({
   const assetClass = TICKER_ASSET_CLASS[node.ticker] ?? "public_equity";
 
   return (
-    <Panel>
-      <CloseButton type="button" aria-label="Close" onClick={onClose}>
+    <Panel
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Holding details for ${node.label}`}
+      onKeyDown={handleKeyDown}
+    >
+      <CloseButton
+        type="button"
+        ref={closeRef}
+        aria-label="Close holding details"
+        onClick={onClose}
+      >
         ×
       </CloseButton>
       <Name>{node.label}</Name>
       <TickerBadge>{node.ticker}</TickerBadge>
 
       <InfoRow>
-        <InfoLabel>Asset Class</InfoLabel>
+        <InfoLabel role="heading" aria-level={3}>
+          Asset Class
+        </InfoLabel>
         <InfoValue>{ASSET_CLASS_LABEL[assetClass]}</InfoValue>
       </InfoRow>
 
       <InfoRow>
-        <InfoLabel>Sector</InfoLabel>
+        <InfoLabel role="heading" aria-level={3}>
+          Sector
+        </InfoLabel>
         <SectorRow>
           <Dot $color={SECTOR_COLOR[node.sector] ?? "#888"} />
           <InfoValue>{node.sector}</InfoValue>
@@ -214,7 +226,9 @@ export function HoldingDetailPanel({
       </InfoRow>
 
       <InfoRow>
-        <InfoLabel>Weight</InfoLabel>
+        <InfoLabel role="heading" aria-level={3}>
+          Weight
+        </InfoLabel>
         <InfoValue>
           {(node.weight * 100).toFixed(0)}% of portfolio
         </InfoValue>
@@ -222,7 +236,9 @@ export function HoldingDetailPanel({
 
       <Divider />
 
-      <SectionLabel>Exposure Links</SectionLabel>
+      <SectionLabel role="heading" aria-level={3}>
+        Exposure Links
+      </SectionLabel>
       {exposureEdges.length === 0 ? (
         <EmptyText>No direct exposure links</EmptyText>
       ) : (

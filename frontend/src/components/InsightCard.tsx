@@ -1,19 +1,14 @@
 import { useState } from "react";
 import styled, { keyframes } from "styled-components";
-import { audio, insights } from "../mocks/fixtures";
-
-interface InsightData {
-  sector: string;
-  percentage: number;
-  exposure_notes: string[];
-}
-
-interface AudioData {
-  risk: { transcript: string };
-}
+import type {
+  PortfolioAudio,
+  PortfolioInsight,
+} from "../hooks/usePortfolioData";
 
 interface InsightCardProps {
   portfolioId: number;
+  insight: PortfolioInsight;
+  audio: PortfolioAudio;
 }
 
 const pulse = keyframes`
@@ -178,7 +173,11 @@ const AnalysisText = styled.div`
   line-height: 1.7;
 `;
 
-export function InsightCard({ portfolioId }: InsightCardProps) {
+export function InsightCard({
+  portfolioId,
+  insight,
+  audio,
+}: InsightCardProps) {
   const [minimized, setMinimized] = useState(false);
   const [activePortfolioId, setActivePortfolioId] = useState(portfolioId);
 
@@ -187,12 +186,26 @@ export function InsightCard({ portfolioId }: InsightCardProps) {
     setMinimized(false);
   }
 
-  const insight = insights[portfolioId] as InsightData;
-  const riskTranscript = (audio[portfolioId] as AudioData).risk.transcript;
+  const riskTranscript = audio.risk.transcript;
 
   if (minimized) {
     return (
-      <Pill type="button" onClick={() => setMinimized(false)}>
+      <Pill
+        type="button"
+        role="button"
+        tabIndex={0}
+        aria-expanded="false"
+        aria-label={`Concentration risk ${insight.percentage.toFixed(
+          0
+        )}% — click to expand`}
+        onClick={() => setMinimized(false)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            setMinimized(false);
+          }
+        }}
+      >
         <PillDot />
         <PillText>
           Concentration Risk · {insight.percentage.toFixed(0)}%
@@ -202,10 +215,15 @@ export function InsightCard({ portfolioId }: InsightCardProps) {
   }
 
   return (
-    <Card>
+    <Card
+      role="region"
+      aria-label="Concentration risk insight"
+      aria-live="polite"
+    >
       <MinimizeButton
         type="button"
-        aria-label="Minimize"
+        aria-label="Minimize concentration risk card"
+        aria-expanded="true"
         onClick={() => setMinimized(true)}
       >
         −
@@ -216,7 +234,13 @@ export function InsightCard({ portfolioId }: InsightCardProps) {
           <SectorName>{insight.sector}</SectorName>
         </HeaderLeft>
         <ScoreBox>
-          <Percentage>{insight.percentage.toFixed(0)}%</Percentage>
+          <Percentage
+            aria-label={`${insight.percentage.toFixed(
+              0
+            )} percent exposure score`}
+          >
+            {insight.percentage.toFixed(0)}%
+          </Percentage>
           <ScoreLabel>exposure score</ScoreLabel>
         </ScoreBox>
       </Header>
