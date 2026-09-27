@@ -7,8 +7,12 @@ interface ModeToggleProps {
   onToggle: (mode: Mode) => void;
 }
 
+const Wrapper = styled.div`
+  pointer-events: auto;
+`;
+
 const SectionLabel = styled.div`
-  color: #555;
+  color: #888899;
   font-size: 11px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -16,31 +20,41 @@ const SectionLabel = styled.div`
 `;
 
 const Group = styled.div`
-  display: flex;
+  display: inline-flex;
   width: 100%;
+  padding: 3px;
+  border-radius: 10px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(26, 32, 53, 0.12);
+  box-shadow: 0 2px 8px rgba(26, 32, 53, 0.06);
 `;
 
-const Item = styled.button<{ $active: boolean; $first: boolean }>`
+const Item = styled.button<{ $active: boolean }>`
   flex: 1;
-  padding: 10px 0;
+  padding: 8px 0;
   cursor: pointer;
   font-family: inherit;
   font-size: 12px;
   border: none;
-  background: ${(props) => (props.$active ? "#3D8FB0" : "#1a1d25")};
-  color: ${(props) => (props.$active ? "#ffffff" : "#666")};
-  border-radius: ${(props) =>
-    props.$first ? "6px 0 0 6px" : "0 6px 6px 0"};
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  background: ${(props) =>
+    props.$active ? "rgba(61, 143, 176, 0.28)" : "transparent"};
+  color: ${(props) => (props.$active ? "#1a1d2e" : "#888899")};
+  font-weight: ${(props) => (props.$active ? 600 : 400)};
+  box-shadow: ${(props) =>
+    props.$active ? "0 2px 6px rgba(61, 143, 176, 0.2)" : "none"};
 `;
 
 export function ModeToggle({ mode, onToggle }: ModeToggleProps) {
   return (
-    <div>
+    <Wrapper>
       <SectionLabel>Mode</SectionLabel>
       <Group role="group" aria-label="Display mode">
         <Item
           type="button"
-          $first
           $active={mode === "visual"}
           aria-pressed={mode === "visual"}
           onClick={() => onToggle("visual")}
@@ -49,7 +63,6 @@ export function ModeToggle({ mode, onToggle }: ModeToggleProps) {
         </Item>
         <Item
           type="button"
-          $first={false}
           $active={mode === "audio"}
           aria-pressed={mode === "audio"}
           onClick={() => onToggle("audio")}
@@ -57,6 +70,6 @@ export function ModeToggle({ mode, onToggle }: ModeToggleProps) {
           Audio-First
         </Item>
       </Group>
-    </div>
+    </Wrapper>
   );
 }

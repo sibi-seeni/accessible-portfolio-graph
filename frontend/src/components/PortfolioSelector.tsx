@@ -11,8 +11,12 @@ interface PortfolioSelectorProps {
   onSelect: (id: number) => void;
 }
 
+const Wrapper = styled.div`
+  pointer-events: auto;
+`;
+
 const SectionLabel = styled.div`
-  color: #555;
+  color: #888899;
   font-size: 11px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -27,23 +31,35 @@ const List = styled.div`
 
 const Item = styled.button<{ $selected: boolean }>`
   width: 100%;
-  padding: 12px 16px;
+  padding: 10px 16px;
   cursor: pointer;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 13px;
   text-align: left;
-  border-radius: 6px;
-  background: ${(props) => (props.$selected ? "#3D8FB0" : "transparent")};
-  color: ${(props) => (props.$selected ? "#ffffff" : "#888")};
-  font-weight: ${(props) => (props.$selected ? 700 : 400)};
-  border: ${(props) => (props.$selected ? "none" : "1px solid #333")};
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: ${(props) =>
+    props.$selected ? "rgba(61, 143, 176, 0.22)" : "rgba(255, 255, 255, 0.45)"};
+  border: ${(props) =>
+    props.$selected
+      ? "1px solid rgba(61, 143, 176, 0.45)"
+      : "1px solid rgba(26, 32, 53, 0.12)"};
+  color: #1a1d2e;
+  font-weight: ${(props) => (props.$selected ? 600 : 400)};
+  box-shadow: ${(props) =>
+    props.$selected
+      ? "0 4px 16px rgba(61, 143, 176, 0.18)"
+      : "0 2px 8px rgba(26, 32, 53, 0.06)"};
 
   ${(props) =>
     !props.$selected &&
     `
       &:hover {
-        border-color: #3D8FB0;
-        color: #ccc;
+        background: rgba(255, 255, 255, 0.65);
+        border-color: rgba(61, 143, 176, 0.35);
+        box-shadow: 0 4px 16px rgba(26, 32, 53, 0.1);
       }
     `}
 `;
@@ -54,7 +70,7 @@ export function PortfolioSelector({
   onSelect,
 }: PortfolioSelectorProps) {
   return (
-    <div>
+    <Wrapper>
       <SectionLabel>Portfolios</SectionLabel>
       <List>
         {portfolios.map((portfolio) => (
@@ -69,6 +85,6 @@ export function PortfolioSelector({
           </Item>
         ))}
       </List>
-    </div>
+    </Wrapper>
   );
 }

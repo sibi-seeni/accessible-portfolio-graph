@@ -8,35 +8,41 @@ import { ParticleField } from "./components/ParticleField";
 import { GlobalStyles } from "./styles/GlobalStyles";
 
 const Shell = styled.div`
-  display: flex;
+  position: relative;
+  width: 100%;
   height: 100vh;
   overflow: hidden;
-  background: #0f1117;
 `;
 
 const Sidebar = styled.aside`
-  width: 260px;
-  flex-shrink: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
   height: 100%;
-  padding: 24px;
+  width: 260px;
+  z-index: 10;
+  pointer-events: none;
+  padding: 28px 20px;
   display: flex;
   flex-direction: column;
   gap: 24px;
-  background: #14171f;
-  overflow-y: auto;
+  background: none;
+  border: none;
 `;
 
 const Title = styled.h1`
-  color: #ffffff;
+  color: #1a1d2e;
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  text-shadow: 0 1px 3px rgba(240, 240, 235, 0.8);
+  pointer-events: auto;
 `;
 
 const Main = styled.main`
   position: relative;
-  flex: 1;
   width: 100%;
-  height: 100%;
+  height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -44,7 +50,7 @@ const Main = styled.main`
 `;
 
 const Placeholder = styled.p`
-  color: #ffffff;
+  color: #1a1d2e;
   font-size: 16px;
 `;
 
@@ -57,7 +63,7 @@ const GraphLayer = styled.div<{ $isActive: boolean }>`
   pointer-events: ${(props) => (props.$isActive ? "auto" : "none")};
   transition: opacity 0.7s ease,
     transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.7s ease;
-  opacity: ${(props) => (props.$isActive ? 1 : 0.09)};
+  opacity: ${(props) => (props.$isActive ? 1 : 0.05)};
   transform: ${(props) => (props.$isActive ? "scale(1)" : "scale(0.88)")};
   filter: ${(props) => (props.$isActive ? "none" : "blur(1px) saturate(0.3)")};
   z-index: ${(props) => (props.$isActive ? 2 : 1)};
@@ -70,8 +76,8 @@ const Vignette = styled.div`
   pointer-events: none;
   background: radial-gradient(
     ellipse at center,
-    transparent 50%,
-    rgba(15, 17, 23, 0.75) 100%
+    transparent 70%,
+    rgba(200, 200, 195, 0.35) 100%
   );
 `;
 

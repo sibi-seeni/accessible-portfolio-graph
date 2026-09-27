@@ -123,15 +123,15 @@ const LegendBox = styled.div`
   position: absolute;
   bottom: 24px;
   left: 24px;
-  background: rgba(15, 17, 23, 0.85);
-  border: 1px solid #2a2a3a;
+  background: rgba(240, 240, 235, 0.88);
+  border: 1px solid rgba(26, 32, 53, 0.15);
   border-radius: 10px;
   padding: 14px 18px;
   min-width: 200px;
 `;
 
 const LegendTitle = styled.div`
-  color: #555;
+  color: #888899;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 1.2px;
@@ -151,12 +151,12 @@ const LegendRow = styled.div`
 
 const LegendLabel = styled.span`
   font-size: 12px;
-  color: #ccc;
+  color: #1a1d2e;
 `;
 
 const LegendDivider = styled.div`
   height: 1px;
-  background: #2a2a3a;
+  background: rgba(26, 32, 53, 0.12);
   margin: 10px 0;
 `;
 
@@ -189,7 +189,7 @@ const EXPOSURE_LEGEND: ExposureLegendRow[] = [
 ];
 
 function AssetClassIcon({ assetClass }: { assetClass: AssetClass }) {
-  const fill = "#888";
+  const fill = "#444455";
 
   switch (assetClass) {
     case "private_equity":
@@ -314,7 +314,8 @@ function drawLabel(
   fontSize: number,
   label: string,
   color: string,
-  bold: boolean
+  bold: boolean,
+  pillFill: string
 ): void {
   const pillPadX = 5;
   const pillPadY = 2;
@@ -330,7 +331,7 @@ function drawLabel(
   const pillH = fontSize + pillPadY * 2;
   const rad = 4;
 
-  ctx.fillStyle = "rgba(15, 17, 23, 0.75)";
+  ctx.fillStyle = pillFill;
   ctx.beginPath();
   ctx.moveTo(pillX + rad, pillY);
   ctx.lineTo(pillX + pillW - rad, pillY);
@@ -362,7 +363,7 @@ interface EdgeStyle {
 
 function getEdgeStyle(link: GraphLinkObject): EdgeStyle {
   if (link.type === "belongs_to_sector") {
-    return { strokeStyle: "#666666", lineWidth: 1.2, alpha: 1.0, dash: [] };
+    return { strokeStyle: "#b0b0b8", lineWidth: 1.2, alpha: 0.6, dash: [] };
   }
 
   const group = VIA_TO_GROUP[link.type] ?? "cash_flow";
@@ -432,18 +433,27 @@ export function PortfolioGraph({ portfolioId }: PortfolioGraphProps) {
 
         ctx.save();
         ctx.shadowColor = color;
-        ctx.shadowBlur = 18;
+        ctx.shadowBlur = 12;
         ctx.beginPath();
         ctx.arc(x, y, SECTOR_RADIUS, 0, 2 * Math.PI);
         ctx.fillStyle = color;
         ctx.fill();
-        ctx.globalAlpha = 0.6;
+        ctx.globalAlpha = 0.4;
         ctx.strokeStyle = color;
         ctx.lineWidth = 2;
         ctx.stroke();
         ctx.restore();
 
-        drawLabel(ctx, x, y + 32, 11, node.label, "#ffffff", true);
+        drawLabel(
+          ctx,
+          x,
+          y + 32,
+          11,
+          node.label,
+          "#0f1117",
+          true,
+          "rgba(240, 240, 235, 0.85)"
+        );
         return;
       }
 
@@ -462,7 +472,16 @@ export function PortfolioGraph({ portfolioId }: PortfolioGraphProps) {
       ctx.stroke();
       ctx.globalAlpha = 1;
 
-      drawLabel(ctx, x, y + r + 14, 9, truncate(node.label, 14), "#ccc", false);
+      drawLabel(
+        ctx,
+        x,
+        y + r + 14,
+        9,
+        truncate(node.label, 14),
+        "#1a1d2e",
+        false,
+        "rgba(240, 240, 235, 0.82)"
+      );
     },
     []
   );

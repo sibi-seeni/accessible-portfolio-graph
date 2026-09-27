@@ -12,7 +12,7 @@ interface Particle {
   pulseSpeed: number;
 }
 
-const PARTICLE_COUNT = 80;
+const PARTICLE_COUNT = 60;
 const MOUSE_RADIUS = 120;
 const CONNECT_DISTANCE = 140;
 const EDGE_MARGIN = 10;
@@ -130,7 +130,7 @@ export function ParticleField() {
           if (distance < CONNECT_DISTANCE) {
             const alpha = (1 - distance / CONNECT_DISTANCE) * 0.18;
             ctx.beginPath();
-            ctx.strokeStyle = `rgba(220, 220, 230, ${alpha})`;
+            ctx.strokeStyle = `rgba(30, 35, 60, ${alpha * 0.6})`;
             ctx.lineWidth = 0.6;
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
@@ -148,12 +148,12 @@ export function ParticleField() {
 
         ctx.beginPath();
         ctx.arc(particle.x, particle.y, currentRadius * 2.2, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(200, 210, 225, ${currentOpacity * 0.08})`;
+        ctx.fillStyle = `rgba(30, 35, 60, ${currentOpacity * 0.06})`;
         ctx.fill();
 
         ctx.beginPath();
         ctx.arc(particle.x, particle.y, currentRadius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(220, 225, 235, ${currentOpacity})`;
+        ctx.fillStyle = `rgba(26, 32, 53, ${currentOpacity * 0.55})`;
         ctx.fill();
       }
     };

@@ -1,6 +1,10 @@
 import { createGlobalStyle } from "styled-components";
 
 export const GlobalStyles = createGlobalStyle`
+  :root {
+    --bg-base: #f0f0eb;
+  }
+
   * {
     box-sizing: border-box;
     margin: 0;
@@ -15,7 +19,7 @@ export const GlobalStyles = createGlobalStyle`
 
   body {
     font-family: system-ui, sans-serif;
-    background: #0f1117;
-    color: #e0e0e0;
+    background: #f0f0eb;
+    color: #1a1d2e;
   }
 `;
