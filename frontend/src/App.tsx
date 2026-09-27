@@ -11,7 +11,7 @@ import { HoldingDetailPanel } from "./components/HoldingDetailPanel";
 import { InsightCard } from "./components/InsightCard";
 import { QueryPanel, type QueryResult } from "./components/QueryPanel";
 import { Legend } from "./components/Legend";
-import { AudioFirstMode } from "./components/AudioFirstMode";
+import { AudioNarrationBar } from "./components/AudioNarrationBar";
 import { ParticleField } from "./components/ParticleField";
 import {
   usePortfolioData,
@@ -171,6 +171,9 @@ function App() {
         >
           Skip to graph
         </a>
+        {mode === "audio" && (
+          <AudioNarrationBar portfolio={currentPortfolio} />
+        )}
         <Sidebar role="navigation" aria-label="Portfolio controls">
           <Title>Xposure</Title>
           <PortfolioSelector
@@ -190,43 +193,38 @@ function App() {
           role="main"
           aria-label="Portfolio graph visualization"
         >
-          {mode === "visual" ? (
-            <>
-              <ParticleField />
-              {portfolios.map((portfolio) => {
-                const isActive = portfolio.id === selectedPortfolioId;
-                return (
-                  <GraphLayer key={portfolio.id} $isActive={isActive}>
-                    <PortfolioGraph
-                      portfolioId={portfolio.id}
-                      graphData={isActive ? activeGraph : undefined}
-                      onNodeClick={setSelectedNode}
-                      selectedNodeId={selectedNode?.id ?? null}
-                      contributingTickers={contributingTickers}
-                      queryHighlightNodeIds={queryHighlightNodeIds}
-                      queryHighlightEdgeIds={queryHighlightEdgeIds}
-                    />
-                  </GraphLayer>
-                );
-              })}
-              <Vignette />
-              {selectedNode && (
-                <HoldingDetailPanel
-                  node={selectedNode}
-                  graph={activeGraph}
-                  onClose={() => setSelectedNode(null)}
+          <ParticleField />
+          {portfolios.map((portfolio) => {
+            const isActive = portfolio.id === selectedPortfolioId;
+            return (
+              <GraphLayer key={portfolio.id} $isActive={isActive}>
+                <PortfolioGraph
+                  portfolioId={portfolio.id}
+                  graphData={isActive ? activeGraph : undefined}
+                  onNodeClick={setSelectedNode}
+                  selectedNodeId={selectedNode?.id ?? null}
+                  contributingTickers={contributingTickers}
+                  queryHighlightNodeIds={queryHighlightNodeIds}
+                  queryHighlightEdgeIds={queryHighlightEdgeIds}
+                  isAudioVisualMode={mode === "audio"}
                 />
-              )}
-              {insight && audio && (
-                <InsightCard
-                  portfolioId={selectedPortfolioId}
-                  insight={insight}
-                  audio={audio}
-                />
-              )}
-            </>
-          ) : (
-            <AudioFirstMode portfolio={currentPortfolio} />
+              </GraphLayer>
+            );
+          })}
+          <Vignette />
+          {selectedNode && (
+            <HoldingDetailPanel
+              node={selectedNode}
+              graph={activeGraph}
+              onClose={() => setSelectedNode(null)}
+            />
+          )}
+          {insight && audio && (
+            <InsightCard
+              portfolioId={selectedPortfolioId}
+              insight={insight}
+              audio={audio}
+            />
           )}
           {loading && <LoadingText>Loading portfolio data…</LoadingText>}
         </Main>

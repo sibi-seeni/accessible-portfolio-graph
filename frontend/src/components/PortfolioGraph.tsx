@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type FC,
+  type KeyboardEvent,
   type Ref,
 } from "react";
 import styled from "styled-components";
@@ -15,6 +16,7 @@ import type {
   GraphNode as PortfolioGraphNode,
   PortfolioGraph as PortfolioGraphData,
 } from "../hooks/usePortfolioData";
+import { playNodeTone } from "../hooks/useGraphSonification";
 import {
   ASSET_CLASS_SHAPE,
   SECTOR_COLOR,
@@ -112,14 +114,23 @@ interface PortfolioGraphProps {
   contributingTickers?: string[];
   queryHighlightNodeIds?: string[];
   queryHighlightEdgeIds?: string[];
+  isAudioVisualMode?: boolean;
 }
 
 const Container = styled.div`
   position: relative;
   width: 100%;
   height: 100%;
+  outline: none;
+
+  &:focus-visible {
+    outline: 2px solid #3d8fb0;
+    outline-offset: -2px;
+    border-radius: 8px;
+  }
 `;
 
+const FOCUS_RING_COLOR = "#1a1d2e";
 const SECTOR_RADIUS = 18;
 
 function truncate(text: string, max: number): string {
@@ -267,12 +278,14 @@ export function PortfolioGraph({
   contributingTickers = [],
   queryHighlightNodeIds = [],
   queryHighlightEdgeIds = [],
+  isAudioVisualMode = false,
 }: PortfolioGraphProps) {
   const fixtureGraph = graphs[portfolioId] as PortfolioGraphData | undefined;
   const source = graphData ?? fixtureGraph;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const graphRef = useRef<ForceGraphHandle | undefined>(undefined);
   const [size, setSize] = useState({ width: 0, height: 0 });
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
 
   const data = useMemo(
     () => ({
@@ -305,9 +318,16 @@ export function PortfolioGraph({
         "Interactive portfolio graph. Use the holding detail panel for accessible node information."
       );
       canvas.setAttribute("role", "img");
-      canvas.setAttribute("tabIndex", "0");
+      canvas.setAttribute("tabIndex", isAudioVisualMode ? "0" : "-1");
     }
-  }, [size.width, size.height]);
+  }, [size.width, size.height, isAudioVisualMode]);
+
+  useEffect(() => {
+    if (!isAudioVisualMode) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFocusedNodeId(null);
+    }
+  }, [isAudioVisualMode]);
 
   useEffect(() => {
     const forceGraph = graphRef.current;
@@ -420,6 +440,16 @@ export function PortfolioGraph({
         ctx.stroke();
       }
 
+      if (isAudioVisualMode && node.id === focusedNodeId) {
+        ctx.beginPath();
+        ctx.arc(x, y, r + 12, 0, Math.PI * 2);
+        ctx.strokeStyle = FOCUS_RING_COLOR;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([2, 3]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
       drawLabel(
         ctx,
         x,
@@ -431,7 +461,13 @@ export function PortfolioGraph({
         "rgba(240, 240, 235, 0.82)"
       );
     },
-    [selectedNodeId, contributingTickers, queryHighlightNodeIds]
+    [
+      selectedNodeId,
+      contributingTickers,
+      queryHighlightNodeIds,
+      focusedNodeId,
+      isAudioVisualMode,
+    ]
   );
 
   const linkCanvasObject = useCallback(
@@ -462,8 +498,67 @@ export function PortfolioGraph({
     [queryHighlightEdgeIds]
   );
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!isAudioVisualMode || !graphData) return;
+
+    const holdings = data.nodes
+      .filter((node) => node.type === "holding")
+      .map((node) => ({
+        id: node.id,
+        sector: node.sector ?? "",
+        x: (node as { x?: number }).x ?? 0,
+      }));
+    if (holdings.length === 0) return;
+
+    if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+      event.preventDefault();
+      const ordered = [...holdings].sort((a, b) => a.x - b.x);
+      const currentIndex = focusedNodeId
+        ? ordered.findIndex((node) => node.id === focusedNodeId)
+        : -1;
+      const delta = event.key === "ArrowRight" ? 1 : -1;
+      const nextIndex =
+        currentIndex < 0
+          ? delta === 1
+            ? 0
+            : ordered.length - 1
+          : (currentIndex + delta + ordered.length) % ordered.length;
+      const next = ordered[nextIndex];
+      setFocusedNodeId(next.id);
+      void playNodeTone(next.sector, next.x, size.width);
+      return;
+    }
+
+    if (event.key === "Enter" || event.key === " ") {
+      if (!focusedNodeId) return;
+      const focused = data.nodes.find(
+        (node) => node.id === focusedNodeId && node.type === "holding"
+      );
+      if (!focused) return;
+      event.preventDefault();
+      onNodeClick?.(focused as HoldingNode);
+    }
+  };
+
+  const focusedNode = focusedNodeId
+    ? data.nodes.find((node) => node.id === focusedNodeId) ?? null
+    : null;
+  const focusedAnnouncement = focusedNode
+    ? `${focusedNode.ticker ?? focusedNode.label}, ${
+        focusedNode.sector ?? "unknown"
+      } sector, ${(
+        TICKER_ASSET_CLASS[focusedNode.ticker ?? ""] ?? "public_equity"
+      ).replace(/_/g, " ")}, ${Math.round(
+        (focusedNode.weight ?? 0) * 100
+      )}% of portfolio`
+    : "";
+
   return (
-    <Container ref={containerRef}>
+    <Container
+      ref={containerRef}
+      tabIndex={isAudioVisualMode ? 0 : -1}
+      onKeyDown={handleKeyDown}
+    >
       {size.width > 0 && size.height > 0 && (
         <TypedForceGraph2D
           ref={graphRef}
@@ -504,6 +599,9 @@ export function PortfolioGraph({
           }}
           onNodeClick={(node) => {
             if (node.type === "holding") {
+              if (isAudioVisualMode) {
+                void playNodeTone(node.sector, node.x ?? 0, size.width);
+              }
               onNodeClick?.(node);
             } else {
               onNodeClick?.(null);
@@ -534,6 +632,23 @@ export function PortfolioGraph({
             } exposure connections.`
           : "Loading graph..."}
       </div>
+      {isAudioVisualMode && (
+        <div
+          role="status"
+          aria-live="polite"
+          aria-label="Focused holding"
+          style={{
+            position: "absolute",
+            width: "1px",
+            height: "1px",
+            overflow: "hidden",
+            clip: "rect(0,0,0,0)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {focusedAnnouncement}
+        </div>
+      )}
     </Container>
   );
 }

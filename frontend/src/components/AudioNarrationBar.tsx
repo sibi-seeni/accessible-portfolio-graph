@@ -1,21 +1,16 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import styled from "styled-components";
-import type {
-  AudioClip,
-  GraphNode,
-  PortfolioAudio,
-} from "../hooks/usePortfolioData";
+import type { AudioClip, PortfolioAudio } from "../hooks/usePortfolioData";
+import { useSonification } from "../hooks/useSonification";
 
-export interface AudioFirstPortfolio {
+export interface AudioNarrationPortfolio {
   id: number;
   name: string;
-  holdings: GraphNode[];
-  sectors: GraphNode[];
   audio: PortfolioAudio;
 }
 
-interface AudioFirstModeProps {
-  portfolio: AudioFirstPortfolio;
+interface AudioNarrationBarProps {
+  portfolio: AudioNarrationPortfolio;
 }
 
 type Clip = "holdings" | "risk";
@@ -24,62 +19,63 @@ const BASE_URL: string =
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
   "http://localhost:8000";
 
-const Column = styled.div`
+const Bar = styled.section`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
   display: flex;
   flex-direction: column;
-  gap: 32px;
-  width: 100%;
-  max-width: 480px;
-  padding: 32px;
-  max-height: 100vh;
-  overflow-y: auto;
+  gap: 8px;
+  padding: 12px 18px;
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(26, 32, 53, 0.12);
+  box-shadow: 0 8px 24px rgba(26, 32, 53, 0.08);
 `;
 
-const TitleWrap = styled.div`
-  text-align: center;
-`;
-
-const Title = styled.h2`
-  font-size: 24px;
-  font-weight: 700;
-  color: #1a1d2e;
-  letter-spacing: -0.3px;
-`;
-
-const ButtonGroup = styled.div`
+const ButtonRow = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  flex-wrap: wrap;
 `;
 
-const PlayButton = styled.button<{ $active: boolean }>`
-  width: 100%;
-  min-height: 56px;
-  padding: 0 24px;
+const NarrationButton = styled.button<{ $active: boolean }>`
+  flex: 1 1 220px;
+  min-height: 48px;
+  padding: 0 20px;
   cursor: pointer;
   font-family: inherit;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   text-align: center;
   color: #1a1d2e;
   border-radius: 12px;
   transition: all 0.2s ease;
   background: ${(props) =>
-    props.$active ? "rgba(61, 143, 176, 0.22)" : "rgba(255, 255, 255, 0.6)"};
+    props.$active ? "rgba(61, 143, 176, 0.22)" : "rgba(255, 255, 255, 0.5)"};
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: ${(props) =>
     props.$active
       ? "1px solid rgba(61, 143, 176, 0.45)"
-      : "1px solid rgba(26, 32, 53, 0.15)"};
+      : "1px solid rgba(26, 32, 53, 0.25)"};
+  box-shadow: 0 1px 3px rgba(26, 32, 53, 0.08);
 
   &:hover {
     border-color: rgba(61, 143, 176, 0.45);
-    background: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.7);
   }
 `;
 
 const Transcript = styled.p`
-  font-size: 14px;
-  line-height: 1.7;
+  margin: 0;
+  max-height: 54px;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.55;
   color: #1a1d2e;
 `;
 
@@ -90,10 +86,11 @@ const clipAudio = (ref: RefObject<HTMLAudioElement | null>) => {
   element.currentTime = 0;
 };
 
-export function AudioFirstMode({ portfolio }: AudioFirstModeProps) {
+export function AudioNarrationBar({ portfolio }: AudioNarrationBarProps) {
   const [activeClip, setActiveClip] = useState<Clip | null>(null);
   const holdingsRef = useRef<HTMLAudioElement | null>(null);
   const riskRef = useRef<HTMLAudioElement | null>(null);
+  const { playAlertChime } = useSonification();
 
   useEffect(() => {
     clipAudio(holdingsRef);
@@ -102,11 +99,14 @@ export function AudioFirstMode({ portfolio }: AudioFirstModeProps) {
     setActiveClip(null);
   }, [portfolio.id]);
 
-  const handlePlay = (clip: Clip) => {
+  const handlePlay = async (clip: Clip) => {
     const target = clip === "holdings" ? holdingsRef : riskRef;
     const other = clip === "holdings" ? riskRef : holdingsRef;
 
     clipAudio(other);
+    if (clip === "risk") {
+      await playAlertChime();
+    }
     void target.current?.play().catch(() => {});
     setActiveClip(clip);
   };
@@ -118,29 +118,32 @@ export function AudioFirstMode({ portfolio }: AudioFirstModeProps) {
   const transcript = activeClip ? transcripts[activeClip].transcript : null;
 
   return (
-    <Column>
-      <TitleWrap aria-live="polite">
-        <Title>{portfolio.name}</Title>
-      </TitleWrap>
-
-      <ButtonGroup>
-        <PlayButton
+    <Bar
+      role="region"
+      aria-label="Audio-visual narration controls"
+    >
+      <ButtonRow>
+        <NarrationButton
           type="button"
           $active={activeClip === "holdings"}
           aria-pressed={activeClip === "holdings"}
-          onClick={() => handlePlay("holdings")}
+          onClick={() => {
+            void handlePlay("holdings");
+          }}
         >
           Play Holdings Overview
-        </PlayButton>
-        <PlayButton
+        </NarrationButton>
+        <NarrationButton
           type="button"
           $active={activeClip === "risk"}
           aria-pressed={activeClip === "risk"}
-          onClick={() => handlePlay("risk")}
+          onClick={() => {
+            void handlePlay("risk");
+          }}
         >
           Play Risk Narration
-        </PlayButton>
-      </ButtonGroup>
+        </NarrationButton>
+      </ButtonRow>
 
       <Transcript aria-live="polite">
         {transcript ?? "Select a clip to hear the portfolio breakdown."}
@@ -156,6 +159,6 @@ export function AudioFirstMode({ portfolio }: AudioFirstModeProps) {
         src={`${BASE_URL}${portfolio.audio.risk.url}`}
         preload="none"
       />
-    </Column>
+    </Bar>
   );
 }

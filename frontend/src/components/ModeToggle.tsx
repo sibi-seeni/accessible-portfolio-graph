@@ -66,10 +66,10 @@ export function ModeToggle({ mode, onToggle }: ModeToggleProps) {
           type="button"
           $active={mode === "audio"}
           aria-pressed={mode === "audio"}
-          aria-label="Audio-First mode"
+          aria-label="Audio-Visual mode"
           onClick={() => onToggle("audio")}
         >
-          Audio-First
+          Audio-Visual
         </Item>
       </Group>
     </Wrapper>
