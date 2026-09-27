@@ -5,7 +5,6 @@ import type {
   GraphNode,
   PortfolioAudio,
 } from "../hooks/usePortfolioData";
-import { useSonification } from "../hooks/useSonification";
 
 export interface AudioFirstPortfolio {
   id: number;
@@ -38,33 +37,6 @@ const Column = styled.div`
 
 const TitleWrap = styled.div`
   text-align: center;
-`;
-
-const ToggleRow = styled.div`
-  display: flex;
-  justify-content: center;
-`;
-
-const SonificationToggle = styled.button<{ $active: boolean }>`
-  padding: 8px 16px;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 12px;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-  background: ${(props) =>
-    props.$active ? "rgba(61, 143, 176, 0.28)" : "rgba(255, 255, 255, 0.45)"};
-  border: 1px solid
-    ${(props) =>
-      props.$active
-        ? "rgba(61, 143, 176, 0.45)"
-        : "rgba(26, 32, 53, 0.12)"};
-  color: ${(props) => (props.$active ? "#1a1d2e" : "#888899")};
-  font-weight: ${(props) => (props.$active ? 600 : 400)};
-
-  &:hover {
-    border-color: rgba(61, 143, 176, 0.45);
-  }
 `;
 
 const Title = styled.h2`
@@ -111,18 +83,6 @@ const Transcript = styled.p`
   color: #1a1d2e;
 `;
 
-const SrOnly = styled.span`
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-`;
-
 const clipAudio = (ref: RefObject<HTMLAudioElement | null>) => {
   const element = ref.current;
   if (!element) return;
@@ -132,10 +92,8 @@ const clipAudio = (ref: RefObject<HTMLAudioElement | null>) => {
 
 export function AudioFirstMode({ portfolio }: AudioFirstModeProps) {
   const [activeClip, setActiveClip] = useState<Clip | null>(null);
-  const [sonificationEnabled, setSonificationEnabled] = useState(true);
   const holdingsRef = useRef<HTMLAudioElement | null>(null);
   const riskRef = useRef<HTMLAudioElement | null>(null);
-  const { playAlertChime } = useSonification(portfolio, sonificationEnabled);
 
   useEffect(() => {
     clipAudio(holdingsRef);
@@ -144,14 +102,11 @@ export function AudioFirstMode({ portfolio }: AudioFirstModeProps) {
     setActiveClip(null);
   }, [portfolio.id]);
 
-  const handlePlay = async (clip: Clip) => {
+  const handlePlay = (clip: Clip) => {
     const target = clip === "holdings" ? holdingsRef : riskRef;
     const other = clip === "holdings" ? riskRef : holdingsRef;
 
     clipAudio(other);
-    if (clip === "risk") {
-      await playAlertChime();
-    }
     void target.current?.play().catch(() => {});
     setActiveClip(clip);
   };
@@ -164,25 +119,6 @@ export function AudioFirstMode({ portfolio }: AudioFirstModeProps) {
 
   return (
     <Column>
-      <SrOnly role="status" aria-live="polite">
-        {`Playing sector breakdown for ${portfolio.name}`}
-      </SrOnly>
-      <ToggleRow>
-        <SonificationToggle
-          type="button"
-          $active={sonificationEnabled}
-          aria-pressed={sonificationEnabled}
-          aria-label={
-            sonificationEnabled
-              ? "Sonification is on, press to mute"
-              : "Sonification is off, press to unmute"
-          }
-          onClick={() => setSonificationEnabled((prev) => !prev)}
-        >
-          {sonificationEnabled ? "Sonification: On" : "Sonification: Off"}
-        </SonificationToggle>
-      </ToggleRow>
-
       <TitleWrap aria-live="polite">
         <Title>{portfolio.name}</Title>
       </TitleWrap>
@@ -192,9 +128,7 @@ export function AudioFirstMode({ portfolio }: AudioFirstModeProps) {
           type="button"
           $active={activeClip === "holdings"}
           aria-pressed={activeClip === "holdings"}
-          onClick={() => {
-            void handlePlay("holdings");
-          }}
+          onClick={() => handlePlay("holdings")}
         >
           Play Holdings Overview
         </PlayButton>
@@ -202,9 +136,7 @@ export function AudioFirstMode({ portfolio }: AudioFirstModeProps) {
           type="button"
           $active={activeClip === "risk"}
           aria-pressed={activeClip === "risk"}
-          onClick={() => {
-            void handlePlay("risk");
-          }}
+          onClick={() => handlePlay("risk")}
         >
           Play Risk Narration
         </PlayButton>

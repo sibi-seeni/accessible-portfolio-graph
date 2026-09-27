@@ -1,5 +1,4 @@
 import styled from "styled-components";
-import * as Tone from "tone";
 
 export type Mode = "visual" | "audio";
 
@@ -68,14 +67,7 @@ export function ModeToggle({ mode, onToggle }: ModeToggleProps) {
           $active={mode === "audio"}
           aria-pressed={mode === "audio"}
           aria-label="Audio-First mode"
-          onClick={() => {
-            try {
-              void Tone.start().catch(() => {});
-            } catch {
-              // ignore audio-context unlock failures
-            }
-            onToggle("audio");
-          }}
+          onClick={() => onToggle("audio")}
         >
           Audio-First
         </Item>
