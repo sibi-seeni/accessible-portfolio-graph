@@ -41,7 +41,7 @@ const FieldGroup = styled.div`
 `;
 
 const PanelLabel = styled.div`
-  color: #888899;
+  color: ${(p) => p.theme.textMuted};
   font-size: 11px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -53,26 +53,27 @@ const InputBar = styled.form`
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(255, 255, 255, 0.75);
+  background: ${(p) => p.theme.surface};
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(26, 32, 53, 0.15);
+  border: 1px solid ${(p) => p.theme.border};
   border-radius: 26px;
   padding: 6px 6px 6px 18px;
-  box-shadow: 0 8px 24px rgba(26, 32, 53, 0.12);
+  box-shadow: ${(p) => p.theme.shadow};
 `;
 
 const Input = styled.input`
   flex: 1;
+  min-width: 0;
   border: none;
   background: transparent;
   outline: none;
   font-size: 13px;
-  color: #1a1d2e;
+  color: ${(p) => p.theme.text};
   font-family: inherit;
 
   &::placeholder {
-    color: #888899;
+    color: ${(p) => p.theme.textMuted};
   }
 `;
 
@@ -115,13 +116,13 @@ const AnswerCard = styled.div`
   max-height: 280px;
   margin-top: 10px;
   overflow-y: auto;
-  background: rgba(255, 255, 255, 0.8);
+  background: ${(p) => p.theme.surface};
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(26, 32, 53, 0.12);
+  border: 1px solid ${(p) => p.theme.border};
   border-radius: 14px;
   padding: 16px 18px;
-  box-shadow: 0 8px 24px rgba(26, 32, 53, 0.1);
+  box-shadow: ${(p) => p.theme.shadow};
 `;
 
 const WarningBanner = styled.div`
@@ -131,12 +132,12 @@ const WarningBanner = styled.div`
   border-radius: 6px;
   margin-bottom: 10px;
   font-size: 11px;
-  color: #7a5a10;
+  color: ${(p) => p.theme.warning};
 `;
 
 const AnswerText = styled.div`
   font-size: 13px;
-  color: #1a1d2e;
+  color: ${(p) => p.theme.text};
   line-height: 1.6;
 `;
 
@@ -153,7 +154,7 @@ const CloseButton = styled.button`
   background: none;
   border: none;
   font-size: 16px;
-  color: #888899;
+  color: ${(p) => p.theme.textMuted};
   cursor: pointer;
 `;
 

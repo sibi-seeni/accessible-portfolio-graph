@@ -21,8 +21,10 @@ from app.insight import (
     compute_theme_insight,
     get_portfolio_insight,
 )
-from app.models import Exposure, Holding, Portfolio, Sector
+from app.models import STATUS_APPROVED, Company, Exposure, Holding, Portfolio, Sector
+from app.graph import to_net_edge
 from app.narration import _generate as _snowflake_generate
+from app.network import Path, find_paths
 
 INTENT_HIDDEN_RISK = "biggest_hidden_risk"
 INTENT_CONNECTION = "connection_explanation"
@@ -96,6 +98,13 @@ STOPWORDS = {
 }
 
 
+MULTI_HOP_MAX = 3
+
+
+def _dedupe_ints(items: list[int]) -> list[int]:
+    return list(dict.fromkeys(items))
+
+
 class PortfolioNotFoundError(LookupError):
     """Raised when the requested portfolio does not exist."""
 
@@ -112,8 +121,11 @@ def _dedupe(items: list[str]) -> list[str]:
 
 def _known_tickers(session: Session) -> set[str]:
     tickers = set(session.scalars(select(Holding.ticker)).all())
-    tickers |= set(session.scalars(select(Exposure.ticker)).all())
-    tickers |= set(session.scalars(select(Exposure.exposed_to_ticker)).all())
+    approved = Exposure.status == STATUS_APPROVED
+    tickers |= set(session.scalars(select(Exposure.ticker).where(approved)).all())
+    tickers |= set(
+        session.scalars(select(Exposure.exposed_to_ticker).where(approved)).all()
+    )
     return {ticker.upper() for ticker in tickers}
 
 
@@ -154,6 +166,7 @@ def _extract_entities(question: str, holdings: list[Holding]) -> list[str]:
     """Resolve holdings mentioned by exact ID or human-readable name."""
     normalized = _normalize(question)
     found: list[str] = []
+    position: dict[str, int] = {}
     aliases: list[tuple[str, str]] = sorted(
         (
             (phrase, holding.ticker)
@@ -166,9 +179,12 @@ def _extract_entities(question: str, holdings: list[Holding]) -> list[str]:
     for phrase, ticker in aliases:
         if ticker in found:
             continue
-        if re.search(rf"\b{re.escape(phrase)}\b", normalized):
+        match = re.search(rf"\b{re.escape(phrase)}\b", normalized)
+        if match:
             found.append(ticker)
-    return found
+            position[ticker] = match.start()
+    # Keep the order the user mentioned them in, so routes read naturally.
+    return sorted(found, key=lambda ticker: position[ticker])
 
 
 def _extract_unknown_tokens(question: str, known: set[str]) -> list[str]:
@@ -251,6 +267,7 @@ def _load_edges(session: Session, held_tickers: set[str]) -> list[Exposure]:
         session.scalars(
             select(Exposure)
             .where(Exposure.ticker.in_(held_tickers))
+            .where(Exposure.status == STATUS_APPROVED)
             .order_by(Exposure.id)
         ).all()
     )
@@ -332,11 +349,32 @@ def _answer_connection(
 ) -> dict[str, Any]:
     held = {holding.ticker for holding in holdings}
     edges = _load_edges(session, held)
-    names = _name_by_ticker(holdings)
+    names = {c.ticker: c.company_name for c in session.scalars(select(Company)).all()}
+    names.update(_name_by_ticker(holdings))
 
     wanted = set(tickers)
+    multi_hop: list[Path] = []
     if len(tickers) >= 2:
         focus = [e for e in edges if e.ticker in wanted and e.exposed_to_ticker in wanted]
+        if not focus and len(tickers) == 2:
+            all_edges = list(
+                session.scalars(
+                    select(Exposure)
+                    .where(Exposure.status == STATUS_APPROVED)
+                    .order_by(Exposure.id)
+                ).all()
+            )
+            multi_hop = find_paths(
+                tickers[0],
+                tickers[1],
+                [to_net_edge(e) for e in all_edges],
+                max_hops=MULTI_HOP_MAX,
+                limit=3,
+            )
+            by_id = {e.id: e for e in all_edges}
+            focus = [by_id[i] for i in _dedupe_ints(
+                [eid for path in multi_hop for eid in path.edge_ids]
+            )]
         connection_exists: bool | None = bool(focus)
     elif unknown:
         focus = []
@@ -356,6 +394,10 @@ def _answer_connection(
         "unknown_identifiers": unknown,
         "requested_pair": _named(holdings, tickers) if len(tickers) >= 2 else None,
         "connection_exists": connection_exists,
+        "multi_hop_routes": [
+            {"hops": path.hops, "route": [names.get(t, t) for t in path.tickers]}
+            for path in multi_hop
+        ],
         "connections": [
             {
                 "edge_id": e.id,
@@ -376,7 +418,9 @@ def _answer_connection(
         "Use the holding display names; never read internal identifiers aloud "
         "and never present a private asset as a public stock. If "
         "connection_exists is false, or a mentioned identifier is unknown, say "
-        "clearly that no curated connection was found. Do not invent links."
+        "clearly that no curated connection was found. If multi_hop_routes is "
+        "not empty, the pair is linked indirectly: walk the shortest route step "
+        "by step, naming each intermediate asset. Do not invent links."
     )
     answer = _narrate(context, instruction)
 

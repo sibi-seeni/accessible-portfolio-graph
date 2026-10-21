@@ -24,14 +24,14 @@ Backend stack:
 - ElevenLabs Python SDK
 - pytest
 
-STRICT SCOPE:
-- Exactly 3 curated portfolios.
-- Approximately 5-8 holdings each.
-- Approximately 10-15 total hidden exposure relationships.
-- Static data only.
+STRICT SCOPE (updated for the product rework):
+- The seed (`data/demo_data.json`) is still exactly 3 curated portfolios of 5-8
+  holdings; people can add portfolios, companies, holdings and exposures at
+  runtime through the API.
 - No live market-data API.
 - No live filing ingestion.
-- No recursive graph traversal.
+- Graph traversal is bounded multi-hop only (max 5 hops, `app/network.py`).
+  The headline `/insight` stays one-hop.
 - No Neo4j.
 - No Timescale hypertables.
 - No temporal graph model.
@@ -42,11 +42,20 @@ STRICT SCOPE:
 - Prefer synchronous Python unless async provides an obvious benefit.
 - Keep dependencies minimal.
 
-Database tables (four-table architecture; do not change):
+Database tables:
 1. portfolios(id, name)
 2. sectors(id, name)
-3. holdings(id, portfolio_id, ticker, company_name, shares, sector)
-4. exposures(id, ticker, exposed_to_ticker, via, note)
+3. holdings(id, portfolio_id, ticker, company_name, shares, sector, weight)
+4. exposures(id, ticker, exposed_to_ticker, via, exposure_sector, note,
+   status, source, confidence)
+5. companies(ticker, company_name, sector, asset_class, description, status,
+   source) - registry of every asset, held or not.
+
+Review lifecycle: `status` is approved / proposed / rejected and `source` is
+curated / user / agent. Only approved rows feed graph, insight, query and
+narration. The connection agent (`app/agent.py`) may only create proposed
+rows; people approve them via /proposals. Curated exposures cannot be deleted.
+Run `python -m scripts.create_schema` to upgrade an existing database.
 
 Asset identifiers (`ticker` / `exposed_to_ticker`):
 `ticker` and `exposed_to_ticker` are legacy field/column names used as stable graph asset identifiers.
@@ -77,7 +86,8 @@ Exposure via values (use only these; do not invent additional relationship types
 Core insight:
 For a selected portfolio, combine direct sector exposure with curated indirect exposure. Return exactly one strongest hidden-sector concentration insight when possible.
 
-API contract:
+API contract (original endpoints are unchanged; see README for the
+explorer, catalogue, proposal and agent endpoints):
 GET /health
 GET /portfolios
 GET /portfolio/{id}/graph
@@ -103,7 +113,8 @@ Only the natural-language query endpoint needs live Snowflake -> ElevenLabs gene
 Engineering rules:
 - Do not redesign the architecture unless explicitly asked.
 - Do not add speculative abstractions.
-- Do not create a generalized graph engine.
+- Keep graph algorithms in `app/network.py` as pure functions over plain
+  dataclasses; no graph database or general-purpose graph engine.
 - Keep functions small and readable.
 - Add type hints.
 - Fail clearly when environment variables are missing.

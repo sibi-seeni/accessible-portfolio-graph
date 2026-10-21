@@ -1,10 +1,10 @@
 from app.db import engine
-from app.models import Base
+from app.migrate import ensure_schema
 
 
 def main() -> None:
-    Base.metadata.create_all(bind=engine)
-    print("Schema ready: portfolios, sectors, holdings, exposures.")
+    ensure_schema(engine)
+    print("Schema ready: portfolios, sectors, holdings, exposures, companies.")
 
 
 if __name__ == "__main__":

@@ -91,3 +91,48 @@ export const SECTOR_MEMBERSHIP_EDGE_STYLE = {
 // existing sector node id (e.g. portfolio 3's "Battery & Critical Minerals" is a
 // cross-cutting theme with no matching sector node). Highlight logic must key off
 // insight.contributing_tickers -> holding node ids, never off insight.sector.
+
+export const ASSET_CLASS_LABEL: Record<AssetClass, string> = {
+  public_equity: "Public Equity",
+  private_equity: "Private Equity",
+  real_estate: "Real Estate",
+  private_credit: "Private Credit",
+  infrastructure: "Infrastructure",
+};
+
+export const VIA_LABEL: Record<string, string> = {
+  demand_driver: "Demand driver",
+  operating_dependency: "Operating dependency",
+  supply_chain: "Supply chain",
+  lending: "Lending relationship",
+  credit_market: "Credit market exposure",
+  financing_dependency: "Financing dependency",
+  housing_cycle: "Housing cycle",
+};
+
+export const GROUP_COLOR: Record<ViaGroup, string> = {
+  cash_flow: "#3D8FB0",
+  financing: "#8B6DAF",
+  housing_cycle: "#C97B3D",
+};
+
+// The backend now sends asset_class; the ticker table covers the fixtures.
+export function assetClassOf(node: {
+  ticker?: string;
+  asset_class?: string;
+}): AssetClass {
+  if (node.asset_class && node.asset_class in ASSET_CLASS_SHAPE) {
+    return node.asset_class as AssetClass;
+  }
+  return TICKER_ASSET_CLASS[node.ticker ?? ""] ?? "public_equity";
+}
+
+// Sectors added by people or the agent get a stable colour from their name.
+export function sectorColor(sector: string | undefined): string {
+  if (!sector) return "#8A8F99";
+  const known = SECTOR_COLOR[sector];
+  if (known) return known;
+  let hash = 0;
+  for (const char of sector) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return `hsl(${hash % 360}, 42%, 52%)`;
+}

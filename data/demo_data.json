@@ -68,35 +68,40 @@
           "company_name": "NVIDIA Corporation",
           "shares": 20,
           "sector": "Semiconductors",
-          "weight": 0.2
+          "weight": 0.2,
+          "asset_class": "public_equity"
         },
         {
           "ticker": "PRIVATE_AI_CO",
           "company_name": "Private AI Software Co.",
           "shares": 1,
           "sector": "Software",
-          "weight": 0.2
+          "weight": 0.2,
+          "asset_class": "private_equity"
         },
         {
           "ticker": "DATA_CENTER_FUND",
           "company_name": "Hyperscale Data Center Fund",
           "shares": 1,
           "sector": "Digital Infrastructure",
-          "weight": 0.2
+          "weight": 0.2,
+          "asset_class": "real_estate"
         },
         {
           "ticker": "NEE",
           "company_name": "NextEra Energy, Inc.",
           "shares": 45,
           "sector": "Utilities",
-          "weight": 0.15
+          "weight": 0.15,
+          "asset_class": "public_equity"
         },
         {
           "ticker": "INFRA_FUND",
           "company_name": "Renewable Infrastructure Fund",
           "shares": 1,
           "sector": "Energy Infrastructure",
-          "weight": 0.25
+          "weight": 0.25,
+          "asset_class": "infrastructure"
         }
       ],
       "expected_insight": {
@@ -125,35 +130,40 @@
           "company_name": "Lennar Corporation",
           "shares": 35,
           "sector": "Homebuilding",
-          "weight": 0.2
+          "weight": 0.2,
+          "asset_class": "public_equity"
         },
         {
           "ticker": "PRIVATE_HOMEBUILDER",
           "company_name": "Sunbelt Residential Partners",
           "shares": 1,
           "sector": "Homebuilding",
-          "weight": 0.2
+          "weight": 0.2,
+          "asset_class": "private_equity"
         },
         {
           "ticker": "MULTIFAMILY_FUND",
           "company_name": "Multifamily Housing Fund",
           "shares": 1,
           "sector": "Residential Real Estate",
-          "weight": 0.25
+          "weight": 0.25,
+          "asset_class": "real_estate"
         },
         {
           "ticker": "RE_CREDIT_FUND",
           "company_name": "Real Estate Credit Fund",
           "shares": 1,
           "sector": "Real Estate Credit",
-          "weight": 0.2
+          "weight": 0.2,
+          "asset_class": "private_credit"
         },
         {
           "ticker": "JPM",
           "company_name": "JPMorgan Chase & Co.",
           "shares": 40,
           "sector": "Financials",
-          "weight": 0.15
+          "weight": 0.15,
+          "asset_class": "public_equity"
         }
       ],
       "expected_insight": {
@@ -184,49 +194,56 @@
           "company_name": "Tesla, Inc.",
           "shares": 25,
           "sector": "Automotive",
-          "weight": 0.2
+          "weight": 0.2,
+          "asset_class": "public_equity"
         },
         {
           "ticker": "GM",
           "company_name": "General Motors Company",
           "shares": 70,
           "sector": "Automotive",
-          "weight": 0.15
+          "weight": 0.15,
+          "asset_class": "public_equity"
         },
         {
           "ticker": "F",
           "company_name": "Ford Motor Company",
           "shares": 150,
           "sector": "Automotive",
-          "weight": 0.1
+          "weight": 0.1,
+          "asset_class": "public_equity"
         },
         {
           "ticker": "CAT",
           "company_name": "Caterpillar Inc.",
           "shares": 20,
           "sector": "Industrials",
-          "weight": 0.1
+          "weight": 0.1,
+          "asset_class": "public_equity"
         },
         {
           "ticker": "XOM",
           "company_name": "Exxon Mobil Corporation",
           "shares": 100,
           "sector": "Energy",
-          "weight": 0.1
+          "weight": 0.1,
+          "asset_class": "public_equity"
         },
         {
           "ticker": "ENPH",
           "company_name": "Enphase Energy, Inc.",
           "shares": 40,
           "sector": "Energy",
-          "weight": 0.1
+          "weight": 0.1,
+          "asset_class": "public_equity"
         },
         {
           "ticker": "ALB",
           "company_name": "Albemarle Corporation",
           "shares": 30,
           "sector": "Materials & Mining",
-          "weight": 0.25
+          "weight": 0.25,
+          "asset_class": "public_equity"
         }
       ],
       "expected_insight": {

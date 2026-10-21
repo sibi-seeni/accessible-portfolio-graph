@@ -17,7 +17,7 @@ const Wrapper = styled.div`
 `;
 
 const SectionLabel = styled.div`
-  color: #888899;
+  color: ${(p) => p.theme.textMuted};
   font-size: 11px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
@@ -42,25 +42,25 @@ const Item = styled.button<{ $selected: boolean }>`
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   background: ${(props) =>
-    props.$selected ? "rgba(61, 143, 176, 0.22)" : "rgba(255, 255, 255, 0.45)"};
+    props.$selected ? props.theme.accentSoft : props.theme.surface};
   border: ${(props) =>
     props.$selected
       ? "1px solid rgba(61, 143, 176, 0.45)"
-      : "1px solid rgba(26, 32, 53, 0.12)"};
-  color: #1a1d2e;
+      : `1px solid ${props.theme.border}`};
+  color: ${(p) => p.theme.text};
   font-weight: ${(props) => (props.$selected ? 600 : 400)};
   box-shadow: ${(props) =>
     props.$selected
       ? "0 4px 16px rgba(61, 143, 176, 0.18)"
-      : "0 2px 8px rgba(26, 32, 53, 0.06)"};
+      : "none"};
 
   ${(props) =>
     !props.$selected &&
     `
       &:hover {
-        background: rgba(255, 255, 255, 0.65);
+        background: ${props.theme.surfaceRaised};
         border-color: rgba(61, 143, 176, 0.35);
-        box-shadow: 0 4px 16px rgba(26, 32, 53, 0.1);
+        box-shadow: ${props.theme.shadow};
       }
     `}
 `;

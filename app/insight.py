@@ -82,7 +82,7 @@ from typing import Sequence
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Exposure, Holding, Portfolio
+from app.models import STATUS_APPROVED, Exposure, Holding, Portfolio
 from app.schemas import PortfolioInsight
 
 METHODOLOGY = "Curated direct and one-hop indirect exposure score based on portfolio weights."
@@ -223,6 +223,7 @@ def get_portfolio_insight(session: Session, portfolio_id: int) -> PortfolioInsig
     edges = session.scalars(
         select(Exposure)
         .where(Exposure.ticker.in_(held_tickers))
+        .where(Exposure.status == STATUS_APPROVED)
         .order_by(Exposure.id)
     ).all()
 
