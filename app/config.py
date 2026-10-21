@@ -17,6 +17,12 @@ class Settings(BaseSettings):
     snowflake_model: str = "openai-gpt-5.4"
     snowflake_fallback_model: str = "openai-gpt-5-mini"
 
+    # Optional override so the connection agent can use any OpenAI-compatible
+    # endpoint; by default it reuses the Snowflake Cortex settings above.
+    agent_base_url: str | None = None
+    agent_api_key: str | None = None
+    agent_model: str | None = None
+
     elevenlabs_api_key: str | None = None
     elevenlabs_narration_voice_id: str | None = None
     elevenlabs_alert_voice_id: str | None = None

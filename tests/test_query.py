@@ -287,3 +287,19 @@ def test_invalid_portfolio_raises(narrate: NarrateRecorder) -> None:
     with pytest.raises(PortfolioNotFoundError):
         answer_portfolio_question(999, "what do I own?")
     assert narrate.calls == []
+
+
+def test_connection_falls_back_to_multi_hop_route(narrate: NarrateRecorder) -> None:
+    result = answer_portfolio_question(3, "How is Tesla connected to Caterpillar?")
+
+    assert result["intent"] == INTENT_CONNECTION
+    assert result["highlight_edge_ids"] == ["exposure:11", "exposure:15"]
+    assert "holding:ALB" in result["highlight_node_ids"]
+
+    context, instruction = narrate.calls[0]
+    assert context["connection_exists"] is True
+    assert context["multi_hop_routes"][0] == {
+        "hops": 2,
+        "route": ["Tesla, Inc.", "Albemarle Corporation", "Caterpillar Inc."],
+    }
+    assert "multi_hop_routes" in instruction

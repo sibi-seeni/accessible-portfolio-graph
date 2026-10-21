@@ -6,10 +6,20 @@ from typing import Any
 from sqlalchemy import delete
 
 from app.db import SessionLocal
-from app.models import EXPOSURE_VIA_VALUES, Exposure, Holding, Portfolio, Sector
+from app.migrate import reset_sequences
+from app.models import (
+    ASSET_CLASS_VALUES,
+    EXPOSURE_VIA_VALUES,
+    Company,
+    Exposure,
+    Holding,
+    Portfolio,
+    Sector,
+)
 
 DATA_PATH = Path(__file__).resolve().parents[1] / "data" / "demo_data.json"
 ALLOWED_VIA = set(EXPOSURE_VIA_VALUES)
+ALLOWED_ASSET_CLASSES = set(ASSET_CLASS_VALUES)
 WEIGHT_TOLERANCE = Decimal("0.0001")
 
 
@@ -47,6 +57,12 @@ def validate(data: dict[str, Any]) -> None:
                 )
             total_weight += weight
 
+            if holding.get("asset_class") not in ALLOWED_ASSET_CLASSES:
+                raise ValueError(
+                    f"holding {holding['ticker']!r} has invalid asset_class "
+                    f"{holding.get('asset_class')!r}"
+                )
+
             if holding["sector"] not in sector_names:
                 raise ValueError(
                     f"holding {holding['ticker']!r} references unknown sector "
@@ -76,17 +92,28 @@ def validate(data: dict[str, Any]) -> None:
             )
 
 
+def _companies(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """One registry row per distinct holding ticker (first occurrence wins)."""
+    companies: dict[str, dict[str, Any]] = {}
+    for portfolio in data["portfolios"]:
+        for holding in portfolio["holdings"]:
+            companies.setdefault(holding["ticker"], holding)
+    return companies
+
+
 def seed(data: dict[str, Any]) -> dict[str, int]:
     counts = {
         "portfolios": len(data["portfolios"]),
         "sectors": len(data["sectors"]),
         "holdings": sum(len(p["holdings"]) for p in data["portfolios"]),
         "exposures": len(data["exposures"]),
+        "companies": len(_companies(data)),
     }
 
     with SessionLocal() as session:
         with session.begin():
             session.execute(delete(Exposure))
+            session.execute(delete(Company))
             session.execute(delete(Holding))
             session.execute(delete(Portfolio))
             session.execute(delete(Sector))
@@ -126,6 +153,17 @@ def seed(data: dict[str, Any]) -> dict[str, int]:
                 )
                 for exposure in data["exposures"]
             )
+            session.add_all(
+                Company(
+                    ticker=ticker,
+                    company_name=holding["company_name"],
+                    sector=holding["sector"],
+                    asset_class=holding["asset_class"],
+                )
+                for ticker, holding in _companies(data).items()
+            )
+            session.flush()
+            reset_sequences(session)
 
     return counts
 
@@ -135,7 +173,7 @@ def main() -> None:
     validate(data)
     counts = seed(data)
     print("Seed complete:")
-    for table in ("portfolios", "sectors", "holdings", "exposures"):
+    for table in ("portfolios", "sectors", "holdings", "exposures", "companies"):
         print(f"  {table}: {counts[table]}")
 
 

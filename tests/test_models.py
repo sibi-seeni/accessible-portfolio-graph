@@ -4,7 +4,13 @@ from app.models import Base
 
 
 def test_table_names() -> None:
-    assert set(Base.metadata.tables) == {"portfolios", "sectors", "holdings", "exposures"}
+    assert set(Base.metadata.tables) == {
+        "portfolios",
+        "sectors",
+        "holdings",
+        "exposures",
+        "companies",
+    }
 
 
 def test_portfolios_columns() -> None:
@@ -67,6 +73,9 @@ def test_exposures_columns() -> None:
         "via",
         "exposure_sector",
         "note",
+        "status",
+        "source",
+        "confidence",
     }
     assert table.c.id.primary_key
     assert table.c.ticker.nullable is False
@@ -80,7 +89,11 @@ def test_exposures_via_check_constraint() -> None:
     from app.models import EXPOSURE_VIA_VALUES
 
     table = Base.metadata.tables["exposures"]
-    checks = [c for c in table.constraints if isinstance(c, CheckConstraint)]
+    checks = [
+        c
+        for c in table.constraints
+        if isinstance(c, CheckConstraint) and c.name == "ck_exposures_via"
+    ]
     assert len(checks) == 1
     sqltext = str(checks[0].sqltext)
     for value in EXPOSURE_VIA_VALUES:
@@ -99,3 +112,35 @@ def test_expected_indexes() -> None:
     assert ("ticker",) in _indexed_columns("holdings")
     assert ("ticker",) in _indexed_columns("exposures")
     assert ("exposed_to_ticker",) in _indexed_columns("exposures")
+
+
+def test_companies_columns_and_constraints() -> None:
+    from app.models import ASSET_CLASS_VALUES
+
+    table = Base.metadata.tables["companies"]
+    assert set(table.columns.keys()) == {
+        "ticker",
+        "company_name",
+        "sector",
+        "asset_class",
+        "description",
+        "status",
+        "source",
+    }
+    assert table.c.ticker.primary_key
+    checks = {
+        c.name: str(c.sqltext)
+        for c in table.constraints
+        if isinstance(c, CheckConstraint)
+    }
+    for value in ASSET_CLASS_VALUES:
+        assert value in checks["ck_companies_asset_class"]
+    assert "proposed" in checks["ck_companies_status"]
+    assert "agent" in checks["ck_companies_source"]
+
+
+def test_exposure_lifecycle_defaults() -> None:
+    table = Base.metadata.tables["exposures"]
+    assert table.c.status.server_default.arg == "approved"
+    assert table.c.source.server_default.arg == "curated"
+    assert table.c.confidence.nullable is True

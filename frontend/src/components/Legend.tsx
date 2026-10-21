@@ -9,15 +9,15 @@ const LegendRoot = styled.div`
 const LegendBox = styled.div`
   position: relative;
   width: 100%;
-  background: rgba(240, 240, 235, 0.88);
-  border: 1px solid rgba(26, 32, 53, 0.15);
+  background: ${(p) => p.theme.surface};
+  border: 1px solid ${(p) => p.theme.border};
   border-radius: 10px;
   padding: 14px 18px;
   min-width: 200px;
 `;
 
 const LegendTitle = styled.div`
-  color: #888899;
+  color: ${(p) => p.theme.textMuted};
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 1.2px;
@@ -25,6 +25,7 @@ const LegendTitle = styled.div`
 `;
 
 const LegendRow = styled.div`
+  color: ${(p) => p.theme.textMuted};
   display: flex;
   align-items: center;
   gap: 10px;
@@ -37,12 +38,12 @@ const LegendRow = styled.div`
 
 const LegendLabel = styled.span`
   font-size: 12px;
-  color: #1a1d2e;
+  color: ${(p) => p.theme.text};
 `;
 
 const LegendDivider = styled.div`
   height: 1px;
-  background: rgba(26, 32, 53, 0.12);
+  background: ${(p) => p.theme.border};
   margin: 10px 0;
 `;
 
@@ -53,7 +54,7 @@ const LegendMinimizeButton = styled.button`
   background: none;
   border: none;
   font-size: 16px;
-  color: #888899;
+  color: ${(p) => p.theme.textMuted};
   cursor: pointer;
 `;
 
@@ -62,18 +63,18 @@ const LegendPill = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.75);
+  background: ${(p) => p.theme.surface};
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(26, 32, 53, 0.15);
+  border: 1px solid ${(p) => p.theme.border};
   border-radius: 24px;
   padding: 10px 18px;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(26, 32, 53, 0.08);
+  box-shadow: ${(p) => p.theme.shadow};
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
-  color: #1a1d2e;
+  color: ${(p) => p.theme.text};
 `;
 
 const ASSET_CLASS_LEGEND: { assetClass: AssetClass; label: string }[] = [
@@ -96,10 +97,11 @@ const EXPOSURE_LEGEND: ExposureLegendRow[] = [
   { label: "Financing linked", stroke: "#8B6DAF", dash: "2,4" },
   { label: "Housing cycle", stroke: "#C97B3D" },
   { label: "Sector membership", stroke: "#666666", opacity: 0.6 },
+  { label: "Proposed, awaiting review", stroke: "#9a9aa6", dash: "3,3" },
 ];
 
 function AssetClassIcon({ assetClass }: { assetClass: AssetClass }) {
-  const fill = "#444455";
+  const fill = "currentColor";
 
   switch (assetClass) {
     case "private_equity":
@@ -159,7 +161,7 @@ export function Legend() {
           }}
         >
           <svg width={14} height={14} viewBox="0 0 20 20" aria-hidden="true">
-            <circle cx={10} cy={10} r={6} fill="#444455" />
+            <circle cx={10} cy={10} r={6} fill="currentColor" />
           </svg>
           Legend
         </LegendPill>
@@ -184,6 +186,12 @@ export function Legend() {
             <LegendLabel>{row.label}</LegendLabel>
           </LegendRow>
         ))}
+        <LegendRow>
+          <svg width={20} height={20} viewBox="0 0 20 20" aria-hidden="true">
+            <circle cx={10} cy={10} r={6} fill="none" stroke="currentColor" strokeWidth={2} />
+          </svg>
+          <LegendLabel>Linked asset, not held</LegendLabel>
+        </LegendRow>
         <LegendDivider />
         <LegendTitle>Exposure Type</LegendTitle>
         {EXPOSURE_LEGEND.map((row) => (

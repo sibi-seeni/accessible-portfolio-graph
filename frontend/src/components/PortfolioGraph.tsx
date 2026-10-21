@@ -8,7 +8,7 @@ import {
   type KeyboardEvent,
   type Ref,
 } from "react";
-import styled from "styled-components";
+import styled, { useTheme } from "styled-components";
 import ForceGraph2D from "react-force-graph-2d";
 import { graphs } from "../mocks/fixtures";
 import type {
@@ -19,9 +19,9 @@ import type {
 import { playNodeTone } from "../hooks/useGraphSonification";
 import {
   ASSET_CLASS_SHAPE,
-  SECTOR_COLOR,
-  TICKER_ASSET_CLASS,
   VIA_TO_GROUP,
+  assetClassOf,
+  sectorColor,
 } from "../config/visualConfig";
 
 export interface HoldingNode {
@@ -31,6 +31,7 @@ export interface HoldingNode {
   ticker: string;
   sector: string;
   weight: number;
+  asset_class?: string;
 }
 
 interface SectorNode {
@@ -39,7 +40,19 @@ interface SectorNode {
   label: string;
 }
 
-type GraphNode = HoldingNode | SectorNode;
+// An asset linked to the portfolio that it does not hold.
+interface ExternalNode {
+  id: string;
+  type: "exposure";
+  label: string;
+  ticker: string;
+  sector?: string;
+  asset_class?: string;
+  hop?: number;
+  status?: string;
+}
+
+type GraphNode = HoldingNode | SectorNode | ExternalNode;
 
 type GraphNodeObject = GraphNode & {
   x?: number;
@@ -110,12 +123,14 @@ const TypedForceGraph2D = ForceGraph2D as unknown as FC<TypedForceGraphProps>;
 interface PortfolioGraphProps {
   portfolioId: number;
   graphData?: PortfolioGraphData | null;
-  onNodeClick?: (node: HoldingNode | null) => void;
+  onNodeClick?: (node: PortfolioGraphNode | null) => void;
   selectedNodeId?: string | null;
   contributingTickers?: string[];
   queryHighlightNodeIds?: string[];
   queryHighlightEdgeIds?: string[];
   isAudioVisualMode?: boolean;
+  // Fade everything outside the highlight (paths, shocks, themes).
+  dimOthers?: boolean;
 }
 
 const Container = styled.div`
@@ -125,14 +140,18 @@ const Container = styled.div`
   outline: none;
 
   &:focus-visible {
-    outline: 2px solid #3d8fb0;
+    outline: 2px solid ${(p) => p.theme.accent};
     outline-offset: -2px;
     border-radius: 8px;
   }
 `;
 
-const FOCUS_RING_COLOR = "#1a1d2e";
 const SECTOR_RADIUS = 18;
+const EXTERNAL_RADIUS = 7;
+
+function holdingRadius(weight: number | undefined): number {
+  return 8 + (weight ?? 0.1) * 32;
+}
 
 function truncate(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max)}…` : text;
@@ -237,9 +256,16 @@ interface EdgeStyle {
   dash: number[];
 }
 
-function getEdgeStyle(link: GraphLinkObject): EdgeStyle {
+function getEdgeStyle(
+  link: GraphLinkObject,
+  structuralColor: string,
+  proposedColor: string
+): EdgeStyle {
   if (link.type === "belongs_to_sector") {
-    return { strokeStyle: "#b0b0b8", lineWidth: 1.2, alpha: 0.6, dash: [] };
+    return { strokeStyle: structuralColor, lineWidth: 1.2, alpha: 0.6, dash: [] };
+  }
+  if (link.status === "proposed") {
+    return { strokeStyle: proposedColor, lineWidth: 1.4, alpha: 0.85, dash: [3, 3] };
   }
 
   const group = VIA_TO_GROUP[link.type] ?? "cash_flow";
@@ -280,7 +306,9 @@ export function PortfolioGraph({
   queryHighlightNodeIds = [],
   queryHighlightEdgeIds = [],
   isAudioVisualMode = false,
+  dimOthers = false,
 }: PortfolioGraphProps) {
+  const theme = useTheme();
   const fixtureGraph = graphs[portfolioId] as PortfolioGraphData | undefined;
   const source = graphData ?? fixtureGraph;
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -340,22 +368,38 @@ export function PortfolioGraph({
       link.type === "belongs_to_sector" ? 100 : 160
     );
     forceGraph.d3ReheatSimulation();
-  }, [portfolioId, size.width, size.height]);
+  }, [portfolioId, size.width, size.height, data]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
       graphRef.current?.zoomToFit(400, 60);
     }, 1500);
     return () => clearTimeout(timeout);
-  }, [portfolioId]);
+  }, [portfolioId, data.nodes.length]);
+
+  const highlightedNodes = useMemo(
+    () => new Set(queryHighlightNodeIds),
+    [queryHighlightNodeIds]
+  );
+  const highlightedEdges = useMemo(
+    () => new Set(queryHighlightEdgeIds),
+    [queryHighlightEdgeIds]
+  );
+  const isDimmed = useCallback(
+    (nodeId: string) => dimOthers && !highlightedNodes.has(nodeId),
+    [dimOthers, highlightedNodes]
+  );
 
   const nodeCanvasObject = useCallback(
     (node: GraphNodeObject, ctx: CanvasRenderingContext2D) => {
       const x = node.x ?? 0;
       const y = node.y ?? 0;
 
+      ctx.save();
+      ctx.globalAlpha = isDimmed(node.id) ? 0.18 : 1;
+
       if (node.type === "sector") {
-        const color = SECTOR_COLOR[node.label] ?? "#555";
+        const color = sectorColor(node.label);
 
         ctx.save();
         ctx.shadowColor = color;
@@ -367,7 +411,7 @@ export function PortfolioGraph({
         ctx.stroke();
         ctx.restore();
 
-        if (queryHighlightNodeIds.includes(node.id)) {
+        if (highlightedNodes.has(node.id)) {
           drawQueryHighlightRing(ctx, x, y, SECTOR_RADIUS);
         }
 
@@ -377,17 +421,57 @@ export function PortfolioGraph({
           y + 32,
           11,
           node.label,
-          "#0f1117",
+          theme.graph.sectorLabel,
           true,
-          "rgba(240, 240, 235, 0.85)"
+          theme.graph.sectorPill
         );
+        ctx.restore();
         return;
       }
 
-      const assetClass = TICKER_ASSET_CLASS[node.ticker] ?? "public_equity";
-      const shape = ASSET_CLASS_SHAPE[assetClass];
-      const color = SECTOR_COLOR[node.sector] ?? "#888";
-      const r = 8 + (node.weight ?? 0.1) * 32;
+      const shape = ASSET_CLASS_SHAPE[assetClassOf(node)];
+
+      if (node.type === "exposure") {
+        const color = sectorColor(node.sector);
+        ctx.beginPath();
+        drawHoldingShape(ctx, shape, x, y, EXTERNAL_RADIUS);
+        ctx.fillStyle = theme.graph.externalFill;
+        ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.setLineDash(node.status === "proposed" ? [2, 2] : []);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        if (highlightedNodes.has(node.id)) {
+          drawQueryHighlightRing(ctx, x, y, EXTERNAL_RADIUS);
+        }
+        if (node.id === selectedNodeId) {
+          ctx.beginPath();
+          ctx.arc(x, y, EXTERNAL_RADIUS + 5, 0, Math.PI * 2);
+          ctx.strokeStyle = theme.accent;
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 3]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        drawLabel(
+          ctx,
+          x,
+          y + EXTERNAL_RADIUS + 12,
+          8,
+          truncate(node.label, 16),
+          theme.graph.label,
+          false,
+          theme.graph.labelPill
+        );
+        ctx.restore();
+        return;
+      }
+
+      const color = sectorColor(node.sector);
+      const r = holdingRadius(node.weight);
 
       ctx.beginPath();
       drawHoldingShape(ctx, shape, x, y, r);
@@ -399,7 +483,7 @@ export function PortfolioGraph({
       ctx.stroke();
       ctx.globalAlpha = 1;
 
-      if (queryHighlightNodeIds.includes(node.id)) {
+      if (highlightedNodes.has(node.id)) {
         drawQueryHighlightRing(ctx, x, y, r);
       }
 
@@ -445,7 +529,7 @@ export function PortfolioGraph({
       if (isAudioVisualMode && node.id === focusedNodeId) {
         ctx.beginPath();
         ctx.arc(x, y, r + 12, 0, Math.PI * 2);
-        ctx.strokeStyle = FOCUS_RING_COLOR;
+        ctx.strokeStyle = theme.focus;
         ctx.lineWidth = 1.5;
         ctx.setLineDash([2, 3]);
         ctx.stroke();
@@ -458,17 +542,20 @@ export function PortfolioGraph({
         y + r + 14,
         9,
         truncate(node.label, 14),
-        "#1a1d2e",
+        theme.graph.label,
         false,
-        "rgba(240, 240, 235, 0.82)"
+        theme.graph.labelPill
       );
+      ctx.restore();
     },
     [
       selectedNodeId,
       contributingTickers,
-      queryHighlightNodeIds,
+      highlightedNodes,
       focusedNodeId,
       isAudioVisualMode,
+      isDimmed,
+      theme,
     ]
   );
 
@@ -478,14 +565,20 @@ export function PortfolioGraph({
       const target = link.target;
       if (typeof source !== "object" || typeof target !== "object") return;
 
-      const { strokeStyle, lineWidth, alpha, dash } = getEdgeStyle(link);
+      const { strokeStyle, lineWidth, alpha, dash } = getEdgeStyle(
+        link,
+        theme.graph.structuralEdge,
+        theme.graph.proposedEdge
+      );
+      const highlighted = highlightedEdges.has(link.id);
 
       ctx.setLineDash(dash);
-      ctx.globalAlpha = alpha;
+      ctx.globalAlpha = dimOthers && !highlighted ? alpha * 0.15 : alpha;
       ctx.strokeStyle = strokeStyle;
       ctx.lineWidth = lineWidth;
 
-      if (queryHighlightEdgeIds.includes(link.id)) {
+      if (highlighted) {
+        ctx.globalAlpha = 1;
         ctx.lineWidth = ctx.lineWidth + 1.5;
         ctx.strokeStyle = "rgba(212, 175, 55, 0.9)";
       }
@@ -497,7 +590,7 @@ export function PortfolioGraph({
       ctx.setLineDash([]);
       ctx.globalAlpha = 1;
     },
-    [queryHighlightEdgeIds]
+    [highlightedEdges, dimOthers, theme]
   );
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -538,7 +631,7 @@ export function PortfolioGraph({
       );
       if (!focused) return;
       event.preventDefault();
-      onNodeClick?.(focused as HoldingNode);
+      onNodeClick?.(focused);
     }
   };
 
@@ -548,9 +641,7 @@ export function PortfolioGraph({
   const focusedAnnouncement = focusedNode
     ? `${focusedNode.ticker ?? focusedNode.label}, ${
         focusedNode.sector ?? "unknown"
-      } sector, ${(
-        TICKER_ASSET_CLASS[focusedNode.ticker ?? ""] ?? "public_equity"
-      ).replace(/_/g, " ")}, ${Math.round(
+      } sector, ${assetClassOf(focusedNode).replace(/_/g, " ")}, ${Math.round(
         (focusedNode.weight ?? 0) * 100
       )}% of portfolio`
     : "";
@@ -573,7 +664,11 @@ export function PortfolioGraph({
           nodeCanvasObject={nodeCanvasObject}
           nodePointerAreaPaint={(node, color, ctx) => {
             const r =
-              node.type === "sector" ? 18 : 8 + (node.weight ?? 0.1) * 32;
+              node.type === "sector"
+                ? SECTOR_RADIUS
+                : node.type === "exposure"
+                  ? EXTERNAL_RADIUS
+                  : holdingRadius(node.weight);
             ctx.beginPath();
             ctx.arc(node.x ?? 0, node.y ?? 0, r + 6, 0, Math.PI * 2);
             ctx.fillStyle = color;
@@ -586,7 +681,11 @@ export function PortfolioGraph({
           warmupTicks={100}
           cooldownTicks={0}
           linkDirectionalParticles={(link) =>
-            link.type === "belongs_to_sector" ? 0 : 2
+            link.type === "belongs_to_sector" ||
+            link.status === "proposed" ||
+            (dimOthers && !highlightedEdges.has(link.id))
+              ? 0
+              : 2
           }
           linkDirectionalParticleWidth={(link) =>
             link.type === "belongs_to_sector" ? 0 : 2
@@ -604,6 +703,8 @@ export function PortfolioGraph({
               if (isAudioVisualMode) {
                 void playNodeTone(node.sector, node.x ?? 0, size.width);
               }
+              onNodeClick?.(node);
+            } else if (node.type === "exposure") {
               onNodeClick?.(node);
             } else {
               onNodeClick?.(null);
@@ -642,7 +743,13 @@ export function PortfolioGraph({
             } holdings and ${
               source.edges.filter((edge) => edge.type !== "belongs_to_sector")
                 .length
-            } exposure connections.`
+            } exposure connections${
+              source.nodes.some((node) => node.type === "exposure")
+                ? ` and ${
+                    source.nodes.filter((node) => node.type === "exposure").length
+                  } linked assets not held`
+                : ""
+            }.`
           : "Loading graph..."}
       </div>
       {isAudioVisualMode && (

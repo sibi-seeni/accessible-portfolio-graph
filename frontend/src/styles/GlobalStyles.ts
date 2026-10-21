@@ -2,7 +2,7 @@ import { createGlobalStyle } from "styled-components";
 
 export const GlobalStyles = createGlobalStyle`
   :root {
-    --bg-base: #f0f0eb;
+    --bg-base: ${(p) => p.theme.bg};
   }
 
   * {
@@ -19,7 +19,8 @@ export const GlobalStyles = createGlobalStyle`
 
   body {
     font-family: system-ui, sans-serif;
-    background: #f0f0eb;
-    color: #1a1d2e;
+    background: ${(p) => p.theme.bg};
+    color: ${(p) => p.theme.text};
+    color-scheme: ${(p) => (p.theme.name === "workspace" ? "dark" : "light")};
   }
 `;

@@ -13,11 +13,15 @@ export interface Portfolio {
 
 export interface GraphNode {
   id: string;
-  type: "holding" | "sector";
+  // "exposure" nodes are assets the portfolio does not hold but is linked to.
+  type: "holding" | "sector" | "exposure";
   label: string;
   ticker?: string;
   sector?: string;
   weight?: number;
+  asset_class?: string;
+  hop?: number;
+  status?: string;
 }
 
 export interface GraphEdge {
@@ -28,6 +32,9 @@ export interface GraphEdge {
   label: string | null;
   exposure_sector?: string;
   note: string | null;
+  status?: string;
+  origin?: string;
+  confidence?: number;
 }
 
 export interface PortfolioGraph {
@@ -66,13 +73,24 @@ const BASE_URL: string =
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
   "http://localhost:8000";
 
-export function usePortfolioData(portfolioId: number) {
+export interface PortfolioDataOptions {
+  depth?: number;
+  includeProposed?: boolean;
+  // Bump to refetch after the graph changes (new company, approved proposal…).
+  refreshKey?: number;
+}
+
+export function usePortfolioData(
+  portfolioId: number,
+  { depth = 1, includeProposed = false, refreshKey = 0 }: PortfolioDataOptions = {}
+) {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [graph, setGraph] = useState<PortfolioGraph | null>(null);
   const [insight, setInsight] = useState<PortfolioInsight | null>(null);
   const [audio, setAudio] = useState<PortfolioAudio | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [online, setOnline] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -91,7 +109,7 @@ export function usePortfolioData(portfolioId: number) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,7 +119,9 @@ export function usePortfolioData(portfolioId: number) {
       try {
         const [graphResponse, insightResponse, audioResponse] =
           await Promise.all([
-            fetch(`${BASE_URL}/portfolio/${portfolioId}/graph`),
+            fetch(
+              `${BASE_URL}/portfolio/${portfolioId}/graph?depth=${depth}&include_proposed=${includeProposed}`
+            ),
             fetch(`${BASE_URL}/portfolio/${portfolioId}/insight`),
             fetch(`${BASE_URL}/portfolio/${portfolioId}/audio`),
           ]);
@@ -113,10 +133,13 @@ export function usePortfolioData(portfolioId: number) {
         ]);
 
         if (cancelled) return;
+        if (!graphResponse.ok) throw new Error(`graph ${graphResponse.status}`);
         setGraph(graphData);
-        setInsight(insightData);
-        setAudio(audioData);
+        // New portfolios have no insight or pre-generated audio yet.
+        setInsight(insightResponse.ok ? insightData : null);
+        setAudio(audioResponse.ok ? audioData : null);
         setError(null);
+        setOnline(true);
       } catch {
         if (cancelled) return;
         setPortfolios(fixturePortfolios);
@@ -124,6 +147,7 @@ export function usePortfolioData(portfolioId: number) {
         setInsight(fixtureInsights[portfolioId] as PortfolioInsight);
         setAudio(fixtureAudio[portfolioId] as PortfolioAudio);
         setError(null);
+        setOnline(false);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -133,7 +157,7 @@ export function usePortfolioData(portfolioId: number) {
     return () => {
       cancelled = true;
     };
-  }, [portfolioId]);
+  }, [portfolioId, depth, includeProposed, refreshKey]);
 
-  return { portfolios, graph, insight, audio, loading, error };
+  return { portfolios, graph, insight, audio, loading, error, online };
 }

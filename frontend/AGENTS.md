@@ -49,11 +49,17 @@ hidden/collapsed) — a holding can have sector-level indirect dependency
 that's worth seeing as its own hub (e.g. a mining company having indirect
 dependency to battery manufacturing). See Visual Config below for styling.
 
-There is **no `asset_class` field** anywhere in the payload. Asset class is
-looked up client-side from `TICKER_ASSET_CLASS` in
-`src/config/visualConfig.ts` — do not try to infer it from ticker naming
-patterns at runtime; the lookup table is the source of truth for this static
-3-portfolio scope.
+Holding and external nodes now carry `asset_class` from the backend's company
+registry. Use `assetClassOf(node)` in `src/config/visualConfig.ts`, which
+prefers that field and falls back to the `TICKER_ASSET_CLASS` table (still
+needed for the bundled fixtures).
+
+Graph additions (rework):
+- `?depth=N` pulls in assets up to N hops from the holdings. Those come back
+  as `type: "exposure"` nodes with id `external:<TICKER>`, a `hop` distance,
+  and `status: "proposed"` when the company is an unreviewed proposal.
+- `?include_proposed=true` also returns proposed edges. Exposure edges carry
+  `status`, `origin` (curated / user / agent) and `confidence` when known.
 
 ### `/portfolio/{id}/insight` — has extra fields, and `narration` is null
 
@@ -147,9 +153,22 @@ not auto-played in sequence.
 portfolios, pulled live from the backend on 2026-09-27. Build both UI shells
 against this before wiring the real fetch calls.
 
+## Rework: layouts and tools
+
+- Two layouts share one state (`src/state/ExplorerContext.tsx`): **Workspace**
+  (dark, rail + graph + inspector) and **Canvas** (the original light look with
+  a floating tool dock and drawer). Themes live in `src/styles/theme.ts`;
+  components read colours from the styled-components theme, not hex literals.
+- Tool panels live in `src/components/tools/` (Inspect, Paths, Shock, Themes,
+  Add, Agent, Review) and call `src/api/client.ts`.
+- Tool results set a `highlight` (node + edge ids) that dims the rest of the
+  graph; question answers still use the gold rings without dimming.
+- Sonification, keyboard navigation and the narration bar are unchanged.
+
 ## Scope reminders
 
-- 3 portfolios, 5–7 holdings each, no live market data, no auth.
+- Seed data is 3 portfolios, 5–7 holdings each; users can add more at runtime.
+  No live market data, no auth.
 - If a real response ever contradicts something in this doc, that's a
   conversation with Person A (backend) — don't quietly work around a schema
   mismatch.
